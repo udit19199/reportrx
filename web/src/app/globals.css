@@ -1,0 +1,238 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Soft, warm off-white for background */
+  --background: oklch(0.985 0.005 80);
+  /* Deep forest green / slate for text */
+  --foreground: oklch(0.25 0.02 160);
+  
+  /* Cards blend subtly with background */
+  --card: oklch(0.995 0.002 80);
+  --card-foreground: oklch(0.25 0.02 160);
+  
+  --popover: oklch(0.995 0.002 80);
+  --popover-foreground: oklch(0.25 0.02 160);
+  
+  /* Primary: deep calming green */
+  --primary: oklch(0.35 0.05 160);
+  --primary-foreground: oklch(0.98 0.01 80);
+  
+  /* Secondary: warm soft terracotta/beige */
+  --secondary: oklch(0.92 0.03 50);
+  --secondary-foreground: oklch(0.3 0.04 40);
+  
+  --muted: oklch(0.95 0.01 80);
+  --muted-foreground: oklch(0.55 0.02 160);
+  
+  /* Accent: Sage green */
+  --accent: oklch(0.88 0.04 150);
+  --accent-foreground: oklch(0.25 0.02 160);
+  
+  --destructive: oklch(0.5 0.15 25);
+  --destructive-foreground: oklch(0.98 0.01 80);
+  
+  --border: oklch(0.9 0.02 80);
+  --input: oklch(0.9 0.02 80);
+  --ring: oklch(0.35 0.05 160);
+  
+  --radius: 1.5rem; /* Very rounded corners by default */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-display: var(--font-display), Georgia, serif;
+  --font-heading: var(--font-display), Georgia, serif;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.5);
+  --radius-3xl: calc(var(--radius) * 2);
+  --radius-full: 9999px;
+}
+
+body {
+  font-family: var(--font-body), system-ui, sans-serif;
+  min-height: 100vh;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Base typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+/* Custom Noise Overlay */
+.noise-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* Organic blobs for background atmosphere */
+.organic-blob {
+  position: absolute;
+  filter: blur(80px);
+  z-index: -1;
+  opacity: 0.6;
+  border-radius: 50%;
+  animation: float 20s infinite ease-in-out alternate;
+}
+
+.blob-1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+  top: -100px;
+  left: -200px;
+  animation-delay: 0s;
+}
+
+.blob-2 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
+  bottom: -100px;
+  right: -100px;
+  animation-delay: -5s;
+}
+
+.blob-3 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, oklch(0.95 0.05 110) 0%, transparent 70%);
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+/* Refined UI Utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+}
+
+.pill-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.35rem 1rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  background: var(--background);
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+}
+
+.lux-button {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.lux-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.lux-button:hover::after {
+  opacity: 1;
+}
+
+.lux-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(32, 45, 40, 0.15);
+}
+
+/* Animations */
+.stagger-1 { animation-delay: 100ms; }
+.stagger-2 { animation-delay: 200ms; }
+.stagger-3 { animation-delay: 300ms; }
+.stagger-4 { animation-delay: 400ms; }
+
+.fade-up-soft {
+  animation: fadeUpSoft 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+@keyframes fadeUpSoft {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.subtle-line {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .organic-blob,
+  .fade-up-soft {
+    animation: none;
+  }
+
+  .lux-button,
+  .lux-button::after {
+    transition: none;
+  }
+
+  .lux-button:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
