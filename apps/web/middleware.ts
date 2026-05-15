@@ -4,7 +4,7 @@ import { auth0 } from "@/lib/auth0";
 
 const PROTECTED_PATHS = ["/app", "/settings"];
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const requiresAuth = PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
