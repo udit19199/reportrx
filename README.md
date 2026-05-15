@@ -8,7 +8,7 @@ A small pnpm monorepo with:
 ## Requirements
 - Node 24.15.0+
 - Postgres running locally
-- Milvus running locally for embeddings
+- Vector store support for embeddings (local file-backed in dev, Milvus server optional)
 
 ## Getting started
 1. Copy env files:
