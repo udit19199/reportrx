@@ -1,0 +1,16 @@
+{
+  "name": "reportrx",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter api --filter web dev",
+    "dev:api": "pnpm --filter api dev",
+    "dev:web": "pnpm --filter web dev",
+    "build": "pnpm --filter api build && pnpm --filter web build",
+    "build:api": "pnpm --filter api build",
+    "build:web": "pnpm --filter web build",
+    "lint": "pnpm --filter web lint && pnpm --filter api exec tsc -p tsconfig.json --noEmit",
+    "typecheck": "pnpm --filter api exec tsc -p tsconfig.json --noEmit && pnpm --filter web exec tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf apps/api/dist apps/api/tsconfig.tsbuildinfo apps/web/.next apps/web/tsconfig.tsbuildinfo"
+  }
+}
