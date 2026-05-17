@@ -1,13 +1,3 @@
-"use client";
-
-import { CategoryScale, Chart, Filler, LinearScale, LineElement, PointElement } from "chart.js";
-import { Line } from "react-chartjs-2";
-
-Chart.register(CategoryScale, LinearScale, LineElement, PointElement, Filler);
-
-const LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-const DATA = [14, 18, 12, 22, 16, 26];
-
 export function AuthIllustration() {
   return (
     <div className="relative hidden items-center justify-center bg-[var(--muted)] lg:flex">
@@ -23,64 +13,39 @@ export function AuthIllustration() {
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-80">
-            <Line
-              data={{
-                labels: LABELS,
-                datasets: [
-                  {
-                    data: DATA,
-                    borderColor: "oklch(0.33 0.055 155)",
-                    backgroundColor: "oklch(0.33 0.055 155 / 0.08)",
-                    fill: true,
-                    pointBackgroundColor: "oklch(0.33 0.055 155)",
-                    pointBorderColor: "#fff",
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    tension: 0.3,
-                  },
-                ],
-              }}
-              options={{
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: 2.2,
-                plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                scales: {
-                  x: {
-                    grid: { display: false },
-                    ticks: { color: "oklch(0.56 0 0 / 0.5)", font: { size: 11 } },
-                  },
-                  y: { display: false, beginAtZero: true },
-                },
-              }}
-            />
-          </div>
+        <svg viewBox="0 0 320 120" className="w-80">
+          <defs>
+            <linearGradient id="authLineFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="oklch(0.33 0.055 155)" stopOpacity="0.12" />
+              <stop offset="100%" stopColor="oklch(0.33 0.055 155)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M0,90 Q40,85 80,70 T160,50 T240,30 T320,20"
+            fill="none"
+            stroke="oklch(0.33 0.055 155)"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M0,90 Q40,85 80,70 T160,50 T240,30 T320,20 L320,120 L0,120 Z"
+            fill="url(#authLineFill)"
+          />
+        </svg>
 
-          <div className="flex items-center gap-6 text-xs text-[var(--muted-foreground)]">
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-emerald-500" />
-              Normal
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-amber-500" />
-              Flagged
-            </span>
-          </div>
-        </div>
-
-        <div className="flex gap-12 text-center text-xs text-[var(--muted-foreground)]">
-          <div>
-            <p className="font-display text-lg font-medium text-[var(--foreground)]">3</p>
-            <p>Reports uploaded</p>
-          </div>
-          <div className="w-px bg-[var(--border)]/40" />
-          <div>
-            <p className="font-display text-lg font-medium text-[var(--foreground)]">28</p>
-            <p>Tests tracked</p>
-          </div>
+        <div className="flex flex-col gap-2 text-sm text-[var(--muted-foreground)]">
+          <p className="flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-[var(--primary)]" />
+            Upload your lab reports
+          </p>
+          <p className="flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-[var(--primary)]" />
+            Get a plain-language summary
+          </p>
+          <p className="flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-[var(--primary)]" />
+            Track changes over time
+          </p>
         </div>
       </div>
     </div>
