@@ -18,7 +18,6 @@ type ReportContentProps = {
   answer: string | null;
   sources: string[];
   analyzing: boolean;
-  consentGranted: boolean;
   trends?: Record<string, TrendDataPoint[]>;
   onQueryChange: (value: string) => void;
   onAnalyze: () => void;
@@ -37,7 +36,6 @@ export function ReportContent({
   answer,
   sources,
   analyzing,
-  consentGranted,
   trends,
   onQueryChange,
   onAnalyze,
@@ -93,7 +91,6 @@ export function ReportContent({
             data={report.parsedData}
             trends={trends}
             query={query}
-            consentGranted={consentGranted}
             analyzing={analyzing}
             answer={answer}
             sources={sources}

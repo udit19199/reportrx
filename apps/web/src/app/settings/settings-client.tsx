@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ShieldCheck, 
-  Loader2, 
   User, 
   AlertTriangle,
   Trash2,
@@ -13,10 +11,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,28 +22,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { readConsentPreference, writeConsentPreference } from "@/lib/consent";
 import { api } from "@/lib/api";
 
 export function SettingsClient({ userEmail }: { userEmail: string }) {
   const router = useRouter();
-  const [consent, setConsent] = useState<boolean | null>(() =>
-    readConsentPreference()
-  );
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteNotImplemented, setDeleteNotImplemented] = useState(false);
-
-  const handleSave = async () => {
-    if (consent === null) return;
-    setSaving(true);
-    writeConsentPreference(consent);
-    setSaved(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setSaved(false);
-    setSaving(false);
-  };
 
   const handleSignOut = async () => {
     await api.logout();
@@ -94,80 +73,6 @@ export function SettingsClient({ userEmail }: { userEmail: string }) {
                   Sign out
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Privacy & Consent */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base font-medium">
-                <ShieldCheck className="size-4 text-[var(--muted-foreground)]" aria-hidden="true" />
-                Privacy & Consent
-              </CardTitle>
-              <CardDescription>
-                Control how your data is processed
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert className="bg-[var(--muted)]/30">
-                <AlertDescription className="text-xs">
-                  Your consent preference controls whether uploaded reports are
-                  processed by third-party AI providers. This setting is stored
-                  locally in your browser.
-                </AlertDescription>
-              </Alert>
-
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--muted)]/20 p-4">
-                <div>
-                  <Label
-                    htmlFor="consent-toggle"
-                    className="text-sm font-medium"
-                  >
-                    AI Processing Consent
-                  </Label>
-                  <p className="text-xs text-[var(--muted-foreground)]">
-                    Allow AI analysis of your reports
-                  </p>
-                </div>
-                <Switch
-                  id="consent-toggle"
-                  checked={consent ?? false}
-                  onCheckedChange={(checked) => setConsent(checked)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--muted-foreground)]">
-                  Status:{" "}
-                  <span className={consent ? "text-emerald-600" : ""}>
-                    {consent ? "Enabled" : "Disabled"}
-                  </span>
-                </span>
-                <Button
-                  onClick={handleSave}
-                  disabled={saving}
-                  size="sm"
-                >
-                  {saving && (
-                    <Loader2 className="mr-2 size-3.5 animate-spin" />
-                  )}
-                  {saving ? "Saving..." : "Save"}
-                </Button>
-              </div>
-
-              {saved && (
-                <p className="text-center text-sm text-emerald-600">
-                  Changes saved successfully
-                </p>
-              )}
-
-              {deleteNotImplemented && (
-                <Alert className="bg-[var(--muted)]/30">
-                  <AlertDescription className="text-xs">
-                    Account deletion is not yet implemented. Check back soon.
-                  </AlertDescription>
-                </Alert>
-              )}
             </CardContent>
           </Card>
 

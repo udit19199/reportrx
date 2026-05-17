@@ -6,7 +6,7 @@ import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Settings | ReportRx",
-  description: "Manage your privacy and consent preferences.",
+  description: "Manage your account settings.",
 };
 
 export default async function SettingsPage() {

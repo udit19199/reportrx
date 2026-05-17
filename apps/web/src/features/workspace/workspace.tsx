@@ -69,7 +69,6 @@ export function Workspace({ initialReports, initialTrends = {} }: WorkspaceProps
           answer={workspace.answer}
           sources={workspace.sources}
           analyzing={workspace.analyzing}
-          consentGranted={workspace.consentGranted}
           trends={workspace.trends}
           onQueryChange={workspace.setQuery}
           onAnalyze={workspace.analyzeSelected}

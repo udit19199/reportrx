@@ -22,13 +22,6 @@ import {
   sortByResultSeverity,
 } from "./result-status";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Table,
   TableBody,
   TableCell,
@@ -68,7 +61,6 @@ type ReportDetailGridProps = {
   data: Record<string, unknown>;
   trends?: Record<string, TrendDataPoint[]>;
   query: string;
-  consentGranted: boolean;
   analyzing: boolean;
   answer: string | null;
   sources: string[];
@@ -130,7 +122,6 @@ const SUGGESTED_QUESTIONS = [
 function QASection({
   expanded,
   query,
-  consentGranted,
   analyzing,
   answer,
   sources,
@@ -140,7 +131,6 @@ function QASection({
 }: {
   expanded: boolean;
   query: string;
-  consentGranted: boolean;
   analyzing: boolean;
   answer: string | null;
   sources: string[];
@@ -148,16 +138,6 @@ function QASection({
   onQueryChange: (value: string) => void;
   onAnalyze: () => void;
 }) {
-  const [showConsentDialog, setShowConsentDialog] = useState(false);
-
-  const handleAsk = () => {
-    if (!consentGranted) {
-      setShowConsentDialog(true);
-      return;
-    }
-    onAnalyze();
-  };
-
   return (
     <div className="border-t border-[var(--border)]/30 pt-6">
       {/* Collapse trigger */}
@@ -210,13 +190,13 @@ function QASection({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && query && !analyzing) {
                   e.preventDefault();
-                  handleAsk();
+                  onAnalyze();
                 }
               }}
               className="min-h-[44px] resize-none border-[var(--border)]/50 bg-[var(--background)] text-sm"
             />
             <Button
-              onClick={handleAsk}
+              onClick={onAnalyze}
               disabled={!query || analyzing}
               className="shrink-0 self-end"
             >
@@ -268,26 +248,6 @@ function QASection({
           )}
         </div>
       )}
-
-      {/* Consent Dialog */}
-      <Dialog open={showConsentDialog} onOpenChange={setShowConsentDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>AI Processing Required</DialogTitle>
-            <DialogDescription>
-              To analyze reports and answer questions, you need to enable AI processing consent in your settings.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowConsentDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => { setShowConsentDialog(false); window.location.href = "/settings"; }}>
-              Go to Settings
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -298,7 +258,6 @@ export function ReportDetailGrid({
   data,
   trends,
   query,
-  consentGranted,
   analyzing,
   answer,
   sources,
@@ -507,7 +466,6 @@ export function ReportDetailGrid({
       <QASection
         expanded={qaExpanded}
         query={query}
-        consentGranted={consentGranted}
         analyzing={analyzing}
         answer={answer}
         sources={sources}

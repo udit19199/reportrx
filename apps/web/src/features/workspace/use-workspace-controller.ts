@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { api, type ApiReport, type TrendDataPoint } from "@/lib/api";
-import { readConsentPreference } from "@/lib/consent";
 
 export type WorkspaceController = {
   reports: ApiReport[];
@@ -16,7 +15,6 @@ export type WorkspaceController = {
   uploading: boolean;
   loading: boolean;
   uploadError: string;
-  consentGranted: boolean;
   trends: Record<string, TrendDataPoint[]>;
   setQuery: (value: string) => void;
   selectReport: (report: ApiReport) => void;
@@ -43,29 +41,12 @@ export const useWorkspaceController = ({ initialReports, initialTrends = {} }: O
   // since data is pre-fetched server-side via getServerReports()
   const [loading, setLoading] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  // Initialise as null so server and client first render match.
-  // Actual localStorage value is read in the mount effect below.
-  const [consentPreference, setConsentPreference] = useState<boolean | null>(null);
   const [trends, setTrends] = useState<Record<string, TrendDataPoint[]>>(initialTrends);
 
   const selected = useMemo(
     () => reports.find((report) => report.id === selectedReportId) ?? null,
     [reports, selectedReportId]
   );
-  const consentGranted = consentPreference === true;
-
-  useEffect(() => {
-    // Read initial value from localStorage after hydration so server
-    // and client renders stay in sync (avoids hydration mismatch).
-    setConsentPreference(readConsentPreference());
-
-    const syncConsent = () => {
-      setConsentPreference(readConsentPreference());
-    };
-
-    window.addEventListener("storage", syncConsent);
-    return () => window.removeEventListener("storage", syncConsent);
-  }, []);
 
   // Refresh trends on mount for data that may have updated since SSR
   useEffect(() => {
@@ -190,7 +171,6 @@ export const useWorkspaceController = ({ initialReports, initialTrends = {} }: O
     uploading,
     loading,
     uploadError,
-    consentGranted,
     trends,
     setQuery,
     selectReport,
