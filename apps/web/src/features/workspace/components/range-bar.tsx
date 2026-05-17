@@ -43,43 +43,78 @@ export function RangeBar({
   const normalWidth = ((range.max - range.min) / span) * 100;
 
   if (variant === "inline") {
+    const isHigh = numValue > range.max;
+    const isLow = numValue < range.min;
+    const colorKey = getResultColorKey(status);
+
+    /* ── Build bar segments ── */
+    /* We draw from left → right. Two possible fills:
+       1. Normal range zone (always shown)
+       2. Excess zone — from the nearest range boundary to the marker, only when out-of-range
+    */
+    const excessLeft = isHigh
+      ? normalStart + normalWidth
+      : isLow
+        ? normalStart
+        : null;
+    const excessWidth =
+      excessLeft !== null ? Math.abs(markerPct - excessLeft) : 0;
+
     return (
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="shrink-0 tabular-nums">
-          <span
-            className="text-base font-semibold"
-            style={{ color: marker }}
-          >
-            {value}
+      <div className="flex min-w-0 items-center gap-2">
+        {/* Value */}
+        <span
+          className="shrink-0 text-base font-semibold tabular-nums"
+          style={{ color: marker }}
+        >
+          {value}
+        </span>
+        {unit ? (
+          <span className="mr-1 shrink-0 text-xs text-[var(--muted-foreground)]">
+            {unit}
           </span>
-          {unit ? (
-            <span className="ml-1 text-xs text-[var(--muted-foreground)]">
-              {unit}
-            </span>
-          ) : null}
-        </div>
+        ) : null}
+
+        {/* Range bar */}
         <div className="relative h-2 min-w-[88px] flex-1 rounded-full bg-[var(--muted)]">
+          {/* Normal range zone */}
           <div
             className="absolute inset-y-0 rounded-full"
             style={{
               left: `${normalStart}%`,
               width: `${normalWidth}%`,
               backgroundColor:
-                "color-mix(in srgb, var(--result-normal) 35%, transparent)",
+                "color-mix(in srgb, var(--result-normal) 30%, transparent)",
             }}
           />
+          {/* Out-of-range excess fill */}
+          {excessLeft !== null && excessWidth > 1 && (
+            <div
+              className="absolute inset-y-0 rounded-full"
+              style={{
+                left: `${excessLeft}%`,
+                width: `${excessWidth}%`,
+                backgroundColor:
+                  "color-mix(in srgb, " + marker + " 50%, transparent)",
+              }}
+            />
+          )}
+          {/* Marker dot */}
           <div
-            className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--card)]"
+            className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--card)] transition-all duration-300"
             style={{ left: `${markerPct}%`, backgroundColor: marker }}
           />
         </div>
-        <span className="shrink-0 text-xs tabular-nums text-[var(--muted-foreground)]">
+
+        {/* Reference range — subtly shown on wider screens */}
+        <span className="hidden shrink-0 text-[11px] tabular-nums text-[var(--muted-foreground)] sm:inline">
           {range.min} – {range.max}
         </span>
       </div>
     );
   }
 
+  /* ── Compact variant ── */
   const pct = Math.min(((numValue - spanMin) / span) * 100, 100);
   const colorKey = getResultColorKey(status);
 
