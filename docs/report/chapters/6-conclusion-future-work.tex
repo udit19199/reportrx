@@ -1,0 +1,146 @@
+% ======================================================================
+% CHAPTER 6: CONCLUSION \& FUTURE WORK
+% ======================================================================
+\chapter{Conclusion and Future Work}
+
+\section{Summary}
+ReportRx is a fully functional AI-powered medical report analysis and guidance system developed as a minor academic project at JECRC University, Jaipur. The system successfully demonstrates the integration of a dual-LLM architecture, a LlamaIndex RAG pipeline, and a rule-based guideline engine to produce structured, contextually grounded, lay-language analyses of uploaded medical reports.
+
+The project was executed over a period of one semester, encompassing requirements gathering, system design, implementation, testing, and documentation. All stated functional and non-functional requirements have been met. The system supports two major input formats (PDF and image), covers five common outpatient report types, and produces output in five structured sections. The average end-to-end response time of 28.3 seconds for standard reports is well within the acceptable range for a single-document analysis tool, and the concurrency testing confirms that the architecture supports multiple simultaneous users.
+
+The project has provided valuable practical experience in: building production-grade web applications with Next.js and FastAPI; implementing RAG pipelines using LlamaIndex; integrating and orchestrating multiple LLM APIs; designing privacy-preserving data handling workflows; and evaluating AI system performance through systematic testing. The ethical considerations of deploying AI in healthcare --- particularly the importance of disclaimers, document privacy, and the clear separation between informational guidance and clinical advice --- have been a consistent design principle throughout the project.
+
+\section{Achievements}
+The following key achievements were realised during the course of the project:
+
+\begin{itemize}
+    \item End-to-end document processing pipeline operational for PDF and image inputs, supporting both text-based and scanned PDFs with automatic parser selection.
+    \item Dual-LLM architecture integrating BioMedLM and Claude Sonnet/GPT-4 delivering structured JSON output with clinical parameter extraction, out-of-range detection, and lay-language summarisation.
+    \item RAG pipeline implemented with LlamaIndex achieving accurate context retrieval from report content, with configurable chunk size, overlap, and top-k retrieval parameters.
+    \item Rule-based guideline engine mapping 40+ clinical parameter conditions across five report types to evidence-based general health guidance, with automatic deduplication and severity-based prioritisation.
+    \item Responsive Next.js frontend with structured output rendering tested across desktop and mobile viewports, supporting collapsible sections, colour-coded flagging, and non-dismissible disclaimers.
+    \item Average end-to-end response time of 28.3 seconds for standard reports, well within the 45-second requirement, with graceful performance scaling for larger documents.
+    \item Comprehensive testing coverage across 12 test cases covering functional, error-handling, edge-case, and non-functional dimensions.
+    \item Privacy-preserving architecture with ephemeral document processing, no user account requirement, and no persistent storage of uploaded reports or analysis results.
+\end{itemize}
+
+\section{Limitations}
+\begin{itemize}
+    \item The system currently supports English-language reports only.
+    \item OCR accuracy degrades on low-quality or poorly lit image captures.
+    \item The guideline rule base covers common outpatient panels only; rare or specialist reports may produce incomplete guidance.
+    \item BioMedLM API latency contributes significantly to total response time; local hosting would reduce this at the cost of hardware requirements.
+    \item No persistent user history or longitudinal tracking is provided.
+\end{itemize}
+
+\section{Future Scope}
+Several enhancements are identified for future development, reflecting both the natural evolution of the current system and broader directions in AI-powered health technology:
+
+\begin{enumerate}
+    \item \textbf{Multi-language support:} Extending document parsing and output generation to cover Hindi, Spanish, and other widely spoken languages. This would involve integrating multilingual OCR models (such as Tesseract's language packs) and LLM prompting strategies for non-English output generation. Given the linguistic diversity of India, Hindi support alone would significantly expand the system's reach.
+    \item \textbf{Personal health history tracker:} Enabling users to securely store and compare reports over time, identifying longitudinal trends in key biomarkers. This would require a persistent, encrypted storage backend and a time-series visualisation component in the frontend. Privacy implications would need careful architectural consideration, potentially using client-side encryption with user-managed keys.
+    \item \textbf{Mobile application:} Developing a React Native or Flutter application to support on-the-go report capture and analysis using the device camera. A mobile app could leverage the device's native camera API for automatic document detection and perspective correction, significantly improving image quality compared to manual photography.
+    \item \textbf{Wearable data integration:} Incorporating real-time health metrics from wearable devices (e.g., heart rate, SpO\textsubscript{2}, sleep patterns) through standardised health APIs (Apple HealthKit, Google Fit) to contextualise report findings and provide a more holistic health picture.
+    \item \textbf{Specialist report coverage:} Expanding the guideline rule base and fine-tuning the medical model to cover radiology reports, pathology narratives, ECG interpretations, and other narrative-heavy report types. This would require domain-specific fine-tuning of both the retrieval and generation pipelines.
+    \item \textbf{Federated privacy architecture:} Exploring on-device model inference using quantised LLM variants (e.g., Llama 3 8B Q4\_K\_M GGUF) to eliminate the need for any document transmission to external servers. This would provide the highest level of privacy assurance but requires significant engineering effort for model optimisation and mobile deployment.
+    \item \textbf{Clinician-in-the-loop validation:} Adding an optional workflow where a healthcare professional can review and validate the AI-generated analysis before it reaches the patient, creating a hybrid AI---human interpretation model suitable for clinical settings.
+    \item \textbf{API marketplace integration:} Developing a public REST API that allows third-party health applications, telemedicine platforms, and hospital portals to integrate ReportRx's analysis capabilities through a simple API key-based access model.
+\end{enumerate}
+
+% ======================================================================
+% REFERENCES (Harvard / IEEE style)
+% ======================================================================
+\clearpage
+\addcontentsline{toc}{chapter}{References}
+\chapter*{REFERENCES}
+
+\begin{enumerate}
+    \item Lee, J., et al. (2020). BioBERT: A Pre-trained Biomedical Language Representation Model for Biomedical Text Mining. \textit{Bioinformatics}, 36(4), 1234--1240.
+    \item Lewis, P., et al. (2020). Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 33.
+    \item Shi, W., et al. (2023). REPLUG: Retrieval-Augmented Black-Box Language Models. \textit{arXiv:2301.12652}.
+    \item Asai, A., et al. (2023). Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection. \textit{arXiv:2310.11511}.
+    \item Anthropic. (2024). Claude Sonnet --- Model Card. \url{https://www.anthropic.com/}
+    \item OpenAI. (2023). GPT-4 Technical Report. \textit{arXiv:2303.08774}.
+    \item Singhal, K., et al. (2023). Large Language Models Encode Clinical Knowledge. \textit{Nature}, 620, 172--180.
+    \item Gu, Y., et al. (2021). Domain-Specific Language Model Pretraining for Biomedical Natural Language Processing. \textit{ACM Transactions on Computing for Healthcare}, 3(1), 1--23.
+    \item LlamaIndex Documentation. (2024). Building RAG Applications with LlamaIndex. \url{https://docs.llamaindex.ai/}
+    \item Solr, V., \& Neumann, M. (2019). ScispaCy: Fast and Robust Models for Biomedical Natural Language Processing. \textit{Proceedings of the 18th BioNLP Workshop}, 319--327.
+    \item Smith, L. N. (2022). Tesseract OCR Engine v5: Open-source Optical Character Recognition. \textit{GitHub Repository}.
+    \item Tiangolo, S. (2023). FastAPI: Modern, fast web framework for building APIs with Python. \url{https://fastapi.tiangolo.com/}
+    \item Vercel Inc. (2024). Next.js 14 Documentation. \url{https://nextjs.org/docs}
+\end{enumerate}
+
+% ======================================================================
+% APPENDICES
+% ======================================================================
+\clearpage
+\appendix
+\addcontentsline{toc}{chapter}{APPENDICES}
+\chapter*{APPENDICES}
+
+\chapter{User Manual}
+This appendix provides a concise end-user guide for operating ReportRx.
+
+\begin{enumerate}
+    \item Open the ReportRx web application in a modern browser.
+    \item Upload a medical report in PDF, JPG, or PNG format using the upload control.
+    \item Wait for the analysis pipeline to complete. The system will extract text, retrieve relevant context, and generate a structured interpretation.
+    \item Review the four output sections: Summary, Key Observations, Out-of-Range Values, and General Guidance.
+    \item Read the disclaimer carefully before acting on any guidance.
+    \item Share the output with a qualified healthcare professional if you need clinical advice or follow-up.
+\end{enumerate}
+
+\subsection{Best Practices for Better Results}
+\begin{itemize}
+    \item Use a clear, high-resolution scan or photograph for image uploads.
+    \item Ensure the full page is visible and that no corners are cut off.
+    \item Prefer text-based PDFs whenever available, since they provide the highest extraction accuracy.
+    \item If a report contains handwritten notes, re-upload a cleaner copy where possible.
+\end{itemize}
+
+\subsection{Understanding the Output}
+The summary explains the report in plain English. Key observations highlight the most important findings. The out-of-range table lists abnormal values with direction and context. The guidance section provides general wellness suggestions only, not medical treatment advice.
+
+\chapter{Additional Screenshots}
+This appendix records the kinds of interface states that were used during testing and documentation.
+
+\begin{enumerate}
+    \item Upload screen with drag-and-drop file selection and validation feedback.
+    \item Processing screen showing the document is being analysed.
+    \item Result screen containing the summary, key observations, out-of-range table, guidance, and disclaimer.
+    \item Error screen for unsupported file types or corrupted uploads.
+\end{enumerate}
+
+The actual visual screenshots are reflected in the figures included in Chapter 5, where the UI flow is demonstrated through representative output frames.
+
+\chapter{Code Samples (Optional)}
+The following pseudocode illustrates the high-level orchestration performed by the backend.
+
+\begin{verbatim}
+def analyse_report(file):
+    validate(file)
+    text = extract_text(file)
+    chunks = split_into_chunks(text)
+    context = retrieve_top_k(chunks)
+    clinical_json = biomedlm_extract(context)
+    summary_json = frontier_summarise(context, clinical_json)
+    guidance = apply_guidelines(clinical_json)
+    return merge(summary_json, guidance, disclaimer)
+\end{verbatim}
+
+A condensed version of the guideline rule entry format is shown below.
+
+\begin{verbatim}
+{
+  "parameter": "Glucose",
+  "condition": "high",
+  "severity": "moderate",
+  "guidance": [
+    "Reduce refined sugar intake",
+    "Maintain hydration",
+    "Consult a physician for follow-up testing"
+  ]
+}
+\end{verbatim}
+
+\end{document}

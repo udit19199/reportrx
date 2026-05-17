@@ -9,6 +9,7 @@ A small pnpm monorepo with:
 - Node 24.15.0+
 - Postgres running locally
 - Vector store support for embeddings (local file-backed in dev, Milvus server optional)
+- LiteParse for document parsing: `npm i -g @llamaindex/liteparse`
 
 ## Getting started
 1. Copy env files:
@@ -19,7 +20,6 @@ A small pnpm monorepo with:
 2. Fill in the required API env vars:
    - `DATABASE_URL`
    - `JWT_SECRET`
-   - `LLAMAPARSE_API_KEY`
    - `OPENAI_API_KEY`
 3. Install dependencies from the repo root:
    ```bash

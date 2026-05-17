@@ -1,0 +1,159 @@
+% ======================================================================
+% CHAPTER 4: IMPLEMENTATION
+% ======================================================================
+\chapter{Implementation}
+
+\section{Tools \& Technologies Used}
+The following tools and technologies underpin the ReportRx implementation:
+
+\begin{table}[h]
+\centering
+\caption{Tools and Technologies}
+\begin{tabular}{|p{2.5cm}|p{4cm}|p{5cm}|}
+    \hline
+    \textbf{Category} & \textbf{Technology} & \textbf{Purpose} \\
+    \hline
+    Frontend & Next.js 14 (React) & Server-side rendering, page routing, UI framework \\
+    Frontend & Tailwind CSS & Utility-first responsive styling \\
+    Backend & FastAPI (Python 3.11) & Async REST API, request handling, pipeline orchestration \\
+    RAG Framework & LlamaIndex & Document indexing, vector retrieval, query engine \\
+    LLM (Frontier) & Claude Sonnet / GPT-4 & General language understanding and summarisation \\
+    LLM (Medical) & BioMedLM & Domain-specific clinical terminology and context \\
+    PDF Parsing & PyMuPDF / pdfplumber & Text extraction from PDF reports \\
+    OCR & Tesseract & Text extraction from image-format reports \\
+    Version Control & Git \& GitHub & Source control and collaboration \\
+    API Testing & Postman & Endpoint validation and manual testing \\
+    IDE & VSCode & Development environment \\
+    \hline
+\end{tabular}
+\end{table}
+
+\section{System Requirements}
+
+\subsection{Hardware Requirements}
+\begin{itemize}
+    \item Processor: Intel Core i5 (8th generation or above) or equivalent
+    \item RAM: 8 GB minimum (16 GB recommended for local model inference)
+    \item Storage: 256 GB SSD or more
+    \item Internet Connection: Required for LLM API calls
+\end{itemize}
+
+\subsection{Software Requirements}
+\begin{itemize}
+    \item Operating System: Windows 10/11, macOS 12+, or Linux (Ubuntu 20.04+)
+    \item Browser: Latest stable release of Chrome, Firefox, or Edge
+    \item Node.js v18+ and Python 3.11+
+    \item Package Managers: npm (frontend), pip (backend)
+    \item Tesseract OCR 5.x (for image report support)
+\end{itemize}
+
+\section{Modules Description}
+
+\subsection{Document Ingestion \& Text Extraction Module}
+This module serves as the entry point for all uploaded content and is responsible for converting heterogeneous file formats into a uniform plain-text representation suitable for downstream NLP processing. The module accepts the uploaded file and routes it to the appropriate parser based on its MIME type.
+
+\paragraph{PDF Processing:}
+PDF files are processed using PyMuPDF (fitz), a high-performance Python library for PDF manipulation. PyMuPDF performs efficient in-memory text extraction while preserving structural cues such as headers, paragraph breaks, and table boundaries. For text-based PDFs (those with embedded text layers), extraction is near-instantaneous and achieves near-perfect accuracy. For scanned PDFs (image-based), the module falls back to first converting each page to a high-resolution PNG image via PyMuPDF's page rendering API, then passing the images to the OCR pipeline.
+
+\paragraph{Image Processing:}
+Image files (JPG/PNG) undergo a pre-processing pipeline before OCR. The pre-processing steps include: (i) conversion to grayscale to reduce colour channel noise; (ii) adaptive thresholding (Otsu's method) for binarisation, which separates text from background under varying lighting conditions; (iii) deskewing to correct rotational misalignment common in mobile-captured photographs; and (iv) contrast enhancement using CLAHE (Contrast Limited Adaptive Histogram Equalisation) to improve text legibility in poorly lit images. The pre-processed image is passed to Tesseract OCR 5.x with the English language model (eng) for text extraction.
+
+\paragraph{Error Handling:}
+Unsupported file types are rejected with a descriptive HTTP 422 error. Corrupted or unreadable files trigger a graceful error response indicating the nature of the failure. Empty files (zero-byte uploads) are detected during validation and rejected before any processing begins. The module returns a normalised plain-text string for downstream processing on success, or an appropriate error structure on failure.
+
+\subsection{RAG Pipeline Module (LlamaIndex)}
+The RAG pipeline module is the core retrieval and reasoning component of the system. The extracted plain text, produced by the Document Ingestion module, is first segmented into overlapping chunks using a sliding window approach. The chunking parameters are configured as follows: chunk size of 512 tokens (approximately 380 words), with a 64-token overlap (12.5\%) between consecutive chunks to ensure that clinically relevant information spanning chunk boundaries is not lost during retrieval. Each chunk is embedded using the text-embedding-ada-002 model (OpenAI), producing a 1536-dimensional vector representation.
+
+These embeddings are stored in a LlamaIndex in-memory VectorStoreIndex. A structured query --- requesting identification of report type, patient name if present, all listed clinical parameters with their measured values and reference ranges, and any out-of-range flags or annotations --- is submitted to the query engine. The query engine performs a cosine similarity search between the query embedding and all chunk embeddings, ranking chunks by relevance score. The top-k (k=5) most relevant chunks are retrieved, preserving their original document order for coherent context. These chunks are concatenated to form the context window that is passed to the dual-LLM inference pipeline.
+
+The LlamaIndex framework also provides built-in mechanisms for query transformation (rewriting the user query for improved retrieval), response synthesis (combining retrieved chunks with the LLM prompt), and metadata filtering, though the current implementation uses the default query engine configuration without custom transformations to maintain simplicity and predictable behaviour for the academic scope of the project.
+
+\subsection{Dual-LLM Inference Module}
+The dual-LLM inference module implements the core intelligence of the ReportRx system by combining a domain-specific biomedical model with a general-purpose frontier language model. This two-stage architecture is designed to leverage the complementary strengths of each model type.
+
+\paragraph{Stage 1: BioMedLM (Clinical Parameter Extraction)}
+The retrieved context from the RAG pipeline is first passed to the BioMedLM model. The prompt is structured to instruct the model to perform a precise, machine-readable extraction task:
+
+\begin{enumerate}
+    \item Identify all clinical parameters mentioned in the report text (e.g., Hemoglobin, WBC, Glucose, LDL Cholesterol).
+    \item For each parameter, extract the measured numerical value and its unit of measurement.
+    \item Extract the stated reference range or normal range.
+    \item Compare the measured value against the reference range and flag it as High (H), Low (L), or Normal (N).
+    \item For flagged parameters, provide a brief clinical significance note explaining what the abnormal value indicates.
+    \item Return the entire extraction as a structured JSON array.
+\end{enumerate}
+
+The BioMedLM output is validated against a JSON schema. If validation fails, the backend retries the prompt once with additional formatting guidance. If validation fails again, the system falls back to a rule-based extraction fallback that uses regex patterns to identify parameters and values directly from the text.
+
+\paragraph{Stage 2: Frontier LLM (Lay-Language Summarisation)}
+The validated BioMedLM JSON output, along with the original retrieved context, is passed to the frontier model (Claude Sonnet or GPT-4). The frontier model is prompted to:
+
+\begin{enumerate}
+    \item Produce a concise, paragraph-length lay-language summary of the report that explains what the report covers and the key takeaway.
+    \item Generate a bulleted list of key observations, highlighting the most important findings in plain English suitable for a non-medical reader.
+    \item For each flagged parameter, provide a brief plain-English explanation of what the parameter measures and what the abnormal value means in everyday language.
+    \item Add a final professional-tone recommendation directing the user to consult their healthcare provider.
+\end{enumerate}
+
+\paragraph{Output Merging:}
+The backend orchestrator receives the JSON outputs from both models, merges them into a single structured response object, and performs final validation. The merged schema contains: report summary (text), key observations (list of strings), flagged parameters (list of objects with parameter name, value, reference range, flag, clinical note, lay explanation), general guidance steps (list of strings, to be populated by the guideline engine), and disclaimer (text).
+
+\subsection{Guideline Engine Module}
+The guideline engine receives the merged LLM output and applies a deterministic, rule-based mapping from identified out-of-range clinical parameters to standardised general health guidance. The rule base is a JSON configuration file containing entries of the form:
+
+\begin{center}
+\texttt{parameter name $\rightarrow$ \{condition: high/low, severity: mild/moderate/severe, guidance: [string]\}}
+\end{center}
+
+For example, an elevated blood glucose entry (Glucose, condition: high, severity: moderate) maps to guidance on dietary sugar reduction, hydration, regular physical activity, and scheduling a follow-up glucose tolerance test. The engine iterates over the list of flagged parameters from the LLM output and performs a dictionary lookup in the JSON rule base using the parameter name as the primary key.
+
+A deduplication step prevents repeated or redundant advice. For instance, if both LDL Cholesterol (high) and Total Cholesterol (high) are flagged, the engine would map both to the guidance item "Reduce intake of saturated fats and trans fats" but includes it only once in the final output. This is implemented using a Python set data structure that tracks guidance text strings as they are added, ensuring that no duplicate entries appear in the output.
+
+The assembled, deduplicated list of guidance steps is appended to the analysis response payload under the "general\_guidance" field, positioned before the mandatory disclaimer. The engine also assigns a priority ordering to guidance items: items with "severe" severity appear first, followed by "moderate", then "mild".
+
+\subsection{Frontend Display Module}
+The Next.js frontend renders the structured API response in a visually organised, card-based layout designed for clarity and accessibility. The output is divided into five distinct sections, each with a clear visual hierarchy:
+
+\begin{enumerate}
+    \item \textbf{Report Summary (Collapsible):} The top section displays the lay-language summary in a visually prominent card with a larger font size. The section is collapsible, allowing users to hide it once read.
+    \item \textbf{Key Observations (Bulleted List):} Notable findings from the report are presented as a bulleted list. Each observation is prefixed with an icon (green checkmark for normal findings, yellow warning triangle for borderline values, red exclamation mark for out-of-range values).
+    \item \textbf{Out-of-Range Values (Colour-Coded Table):} Flagged parameters are displayed in a table with colour-coded rows: red background for high values, blue background for low values. Each row contains: the parameter name, the measured value with unit, the reference range, and the clinical significance note from BioMedLM.
+    \item \textbf{General Guidance Steps (Numbered List):} Health guidance from the guideline engine is displayed as an ordered, numbered list for easy reference.
+    \item \textbf{Disclaimer (Non-Dismissible Box):} A visually distinct disclaimer box with a light-yellow background and a warning icon border is rendered at the bottom of every analysis output. The box contains text directing the user to consult a qualified medical professional. The disclaimer cannot be dismissed or hidden by the user, ensuring it is always visible when the analysis is viewed.
+\end{enumerate}
+
+The interface is fully responsive and has been tested on Chrome, Firefox, and Safari on both desktop (1920x1080, 1366x768) and mobile (390x844, 375x667) viewports. Loading states are handled with a skeleton loading animation that shows the expected layout structure before content arrives, reducing perceived wait time. Error states are displayed as animated error banners with retry buttons where applicable.
+
+\section{Algorithms \& Logic Used}
+
+\subsection{Chunking \& Retrieval}
+Document chunking uses a sliding-window approach with a fixed token budget per chunk. The algorithm proceeds as follows: the extracted plain text is tokenised using the OpenAI tiktoken tokeniser (cl100k\_base encoding). Tokens are grouped into chunks of 512 tokens, with a 64-token overlap applied between consecutive chunks. The overlap ensures that clinical information (e.g., a parameter name appearing at the end of one chunk and its value at the beginning of the next) is not split across a chunk boundary. Each chunk retains metadata indicating its position in the original document (sequential index), enabling reconstruction of document order during retrieval.
+
+Retrieval uses cosine similarity between the query embedding (produced by the same embedding model) and each chunk embedding. The similarity score $\text{sim}(q, c_i)$ for query $q$ and chunk $c_i$ is computed as:
+
+\[
+\text{sim}(q, c_i) = \frac{\vec{q} \cdot \vec{c_i}}{\|\vec{q}\| \cdot \|\vec{c_i}\|}
+\]
+
+The top-5 chunks by similarity score are retrieved and concatenated in their original document order (not by score order) to form a coherent context window. This ordering preserves the logical flow of the report, which is critical for the LLM's ability to understand the document structure during inference.
+
+\subsection{Out-of-Range Detection}
+The out-of-range detection algorithm is primarily LLM-driven, with a regex-based fallback for robustness. The BioMedLM prompt includes explicit instructions to compare each extracted numerical value against its stated reference range. Where no reference range is present in the document, the model falls back to standard population reference values from its training data. Values outside the reference range are flagged with a direction indicator (H for high, L for low) and a brief clinical significance note.
+
+If the BioMedLM response is unavailable or fails validation, a rule-based fallback algorithm is triggered. This fallback uses regular expression patterns to extract numerical values and range boundaries from the text. For each extracted parameter-value pair, the algorithm parses the reference range string (supporting formats such as "120--140 mg/dL", "3.5--5.0", or "< 200 mg/dL") and performs a direct numerical comparison. The fallback covers the most common parameter formats but has more limited coverage than the LLM-based approach.
+
+\subsection{Guideline Mapping}
+The guideline mapping algorithm is a deterministic dictionary lookup with deduplication and priority ordering. The algorithm proceeds as follows:
+
+\begin{enumerate}
+    \item Accept the list of flagged parameters from the merged LLM output.
+    \item For each flagged parameter, query the JSON rule base using the parameter name as the key.
+    \item If a matching rule is found, retrieve the associated guidance text strings and severity level.
+    \item Insert each guidance string into a Python set to eliminate duplicates.
+    \item After processing all flagged parameters, convert the set back to a list.
+    \item Sort the list by severity level (severe $>$ moderate $>$ mild).
+    \item Append the final ordered, deduplicated list to the analysis response.
+\end{enumerate}
+
+This approach ensures that the guidance output is concise, non-redundant, and clinically appropriate. The deduplication step is particularly important for correlated parameters (e.g., multiple lipid panel values triggering overlapping dietary advice).
+

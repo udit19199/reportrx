@@ -1,0 +1,251 @@
+% ======================================================================
+% CHAPTER 3: SYSTEM DESIGN
+% ======================================================================
+\chapter{System Design}
+
+\section{System Architecture}
+ReportRx adopts a three-tier architecture comprising a client-side frontend presentation layer, a server-side backend API layer, and an AI inference layer. This separation of concerns ensures modularity, maintainability, and the ability to independently scale or replace each tier without affecting the others.
+
+\paragraph{Frontend Tier (Presentation Layer)}
+The frontend is implemented in Next.js 14 (React) with Tailwind CSS and is responsible for file upload, request submission, loading state management, and structured result rendering. The user interface is organised into a single-page application (SPA) paradigm with client-side routing. Key UI components include: a drag-and-drop file upload zone with format validation feedback; a processing progress indicator showing the current stage of analysis (upload, extraction, analysis, guidance); and a structured output display card with five collapsible sections (Report Summary, Key Observations, Out-of-Range Values Table, General Guidance Steps, and Disclaimer). The frontend communicates with the backend exclusively through a single REST API endpoint using the Fetch API. Error states (network failure, invalid file type, server error) are handled with user-friendly error banners and retry prompts.
+
+\paragraph{Backend Tier (API Layer)}
+The backend is a FastAPI application that exposes a single primary endpoint (\texttt{POST /api/v1/analyse}) which orchestrates the complete analysis workflow. The endpoint accepts a multipart form upload containing the file and optional metadata (report type hint). The request lifecycle within the backend proceeds as follows:
+
+\begin{enumerate}
+    \item \textbf{Validation:} File type is checked against an allowed list (application/pdf, image/jpeg, image/png). File size is checked against a configurable maximum (default: 20 MB). Malformed requests are rejected with HTTP 422 and a descriptive JSON error body.
+    \item \textbf{Routing:} Valid files are routed to the appropriate extraction pipeline based on MIME type --- PyMuPDF for PDF documents, Tesseract OCR for image files.
+    \item \textbf{Extraction:} Text content is extracted and normalised into a plain-text string. Structural cues (table boundaries, section headers, numerical columns) are preserved where possible.
+    \item \textbf{RAG Indexing:} Extracted text is chunked and embedded using the configured embedding model. Chunks are stored in an in-memory LlamaIndex VectorStoreIndex.
+    \item \textbf{Retrieval:} A structured query is constructed and executed against the index, retrieving the top-k most relevant document chunks.
+    \item \textbf{Inference:} Retrieved context is passed sequentially to the BioMedLM model and then to the frontier LLM (Claude Sonnet or GPT-4), producing a merged structured JSON output.
+    \item \textbf{Guideline:} The guideline engine maps flagged parameters to health guidance rules and appends them to the output payload.
+    \item \textbf{Response:} The final structured JSON response is serialised, returned to the frontend with HTTP 200, and the in-memory index is destroyed.
+\end{enumerate}
+
+\paragraph{AI Inference Layer}
+The AI inference layer consists of external API calls to the Anthropic (Claude Sonnet) or OpenAI (GPT-4) endpoint for the frontier model, and a locally hosted or API-accessible BioMedLM instance for the biomedical model. Both models are accessed via REST API calls with structured prompt templates. The BioMedLM prompt is designed for structured parameter extraction and clinical annotation, while the frontier model prompt is designed for lay-language explanation and guidance generation. The outputs are merged by the backend orchestration logic, which reconciles the JSON schemas of both model responses and validates the final structure before passing it to the guideline engine.
+
+% Figure: caption BELOW the figure, centered
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[>=Latex, node distance=1.8cm]
+        \tikzset{block/.style={rectangle, draw, rounded corners, align=center, minimum height=1.2cm, minimum width=3.8cm, fill=blue!7}}
+        \node[block] (frontend) {Frontend\\Next.js + Tailwind\\Upload \& Output UI};
+        \node[block, right=2.8cm of frontend, fill=green!8] (backend) {Backend\\FastAPI + LlamaIndex\\Validation \& Orchestration};
+        \node[block, right=2.8cm of backend, fill=orange!10] (ai) {AI Inference Layer\\BioMedLM + Claude/GPT-4\\Clinical Extraction \& Summarisation};
+        \node[block, below=1.5cm of backend, minimum width=5.0cm, fill=gray!10] (guide) {Guideline Engine\\Rule Base + Deduplication\\General Health Advice};
+        \draw[->, thick] (frontend) -- node[above]{REST API} (backend);
+        \draw[->, thick] (backend) -- node[above]{prompts + retrieved context} (ai);
+        \draw[->, thick] (ai) |- (backend);
+        \draw[->, thick] (backend) -- (guide);
+        \draw[->, thick] (guide.west) -| node[pos=0.25, below]{augmented response} (frontend.south);
+    \end{tikzpicture}
+    \caption{System Architecture Diagram}
+\end{figure}
+
+\section{UML Diagrams}
+Unified Modeling Language (UML) diagrams are used to visualise the system's structure and behaviour from different perspectives. Three UML diagram types are presented: a Use Case Diagram to capture functional requirements from the user's perspective, an Activity Diagram to illustrate the end-to-end processing workflow, and a Sequence Diagram to detail the interaction sequence between system components during a typical analysis session.
+
+\subsection{Use Case Diagram}
+The primary actor is the User (Patient), who interacts with the system to obtain a medical report analysis. The system use cases are:
+
+\begin{enumerate}
+    \item \textbf{Upload Medical Report:} The user selects and submits a medical report file (PDF or image) via the web interface. The system validates the file format and size before accepting it.
+    \item \textbf{View Report Summary:} After processing, the system displays a concise lay-language summary of the uploaded report's contents.
+    \item \textbf{View Key Observations:} The system highlights the most clinically significant findings from the report, presented in plain English.
+    \item \textbf{View Out-of-Range Values:} Parameters whose measured values fall outside the stated reference range are displayed in a colour-coded table with clinical context.
+    \item \textbf{View General Health Guidance:} Evidence-based lifestyle and follow-up recommendations are presented for flagged parameters.
+    \item \textbf{View Professional Consultation Disclaimer:} A mandatory, non-dismissible disclaimer is displayed with every analysis, directing users to consult a qualified healthcare professional.
+\end{enumerate}
+
+A secondary actor, the AI Backend (LLM APIs), interacts with the system through API calls mediated by the FastAPI backend. The AI Backend is not directly visible to the user but is essential for the analysis pipeline.
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[>=Latex, node distance=0.9cm]
+        \tikzset{usecase/.style={ellipse, draw, align=center, minimum width=3.1cm, minimum height=0.9cm, fill=yellow!8}}
+        \node[draw, rounded corners, fill=gray!5, minimum width=12.5cm, minimum height=8.3cm, label=above:{ReportRx System}] (sys) {};
+        \node[draw, circle, fill=blue!8, left=2.5cm of sys.west, yshift=2.3cm] (user) {User};
+        \node[usecase] (u1) at ($(sys.center)+(0,2.6)$) {Upload\\Medical Report};
+        \node[usecase] (u2) at ($(sys.center)+(-3.8,1.0)$) {View\\Summary};
+        \node[usecase] (u3) at ($(sys.center)+(3.8,1.0)$) {View Key\\Observations};
+        \node[usecase] (u4) at ($(sys.center)+(-3.8,-1.3)$) {View Out-of-Range\\Values};
+        \node[usecase] (u5) at ($(sys.center)+(3.8,-1.3)$) {View Health\\Guidance};
+        \node[usecase] (u6) at ($(sys.center)+(0,-2.9)$) {View Professional\\Disclaimer};
+        \draw[->, thick] (user) -- (u1);
+        \draw[->, thick] (user) -- (u2);
+        \draw[->, thick] (user) -- (u3);
+        \draw[->, thick] (user) -- (u4);
+        \draw[->, thick] (user) -- (u5);
+        \draw[->, thick] (user) -- (u6);
+    \end{tikzpicture}
+    \caption{Use Case Diagram}
+\end{figure}
+
+\subsection{Activity Diagram}
+The activity diagram models the sequential workflow of the entire analysis process from user initiation to output display. The activity flow begins with the user selecting and uploading a file. The system validates the file type and size against configured limits. On successful validation, text extraction commences via the appropriate pipeline (PyMuPDF for PDF, Tesseract OCR for images). On validation failure, an appropriate error message is returned and the user is prompted to retry. Extracted text is indexed into the LlamaIndex in-memory vector store and queried using the structured retrieval prompt. The retrieved context is passed to the dual-LLM pipeline: first to BioMedLM for clinical parameter extraction and annotation, then to the frontier LLM for lay-language summarisation. The guideline engine maps flagged parameters to health guidance rules and appends the results. The structured output is rendered in the frontend interface. At any stage, if an error occurs (extraction failure, API timeout, invalid response format), the pipeline is aborted and a descriptive error message is displayed to the user.
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[>=Latex, node distance=0.95cm]
+        \tikzset{flowstep/.style={rectangle, draw, rounded corners, align=center, minimum width=3.8cm, minimum height=0.9cm, fill=blue!6}, decision/.style={diamond, draw, align=center, aspect=2, inner sep=1pt, fill=orange!10}}
+        \node[flowstep] (s1) {Upload Medical Report};
+        \node[flowstep, below=of s1] (s2) {Validate File Type and Size};
+        \node[decision, below=of s2] (d1) {Valid?};
+        \node[flowstep, below left=1.0cm and 1.8cm of d1] (s3) {Show Error and Retry};
+        \node[flowstep, below right=1.0cm and 1.8cm of d1] (s4) {Extract Text};
+        \node[flowstep, below=of s4] (s5) {Build RAG Index and Retrieve Context};
+        \node[flowstep, below=of s5] (s6) {Run Dual-LLM Inference};
+        \node[flowstep, below=of s6] (s7) {Apply Guideline Rules};
+        \node[flowstep, below=of s7] (s8) {Render Structured Output};
+        \draw[->, thick] (s1) -- (s2);
+        \draw[->, thick] (s2) -- (d1);
+        \draw[->, thick] (d1) -- node[left]{No} (s3);
+        \draw[->, thick] (d1) -- node[right]{Yes} (s4);
+        \draw[->, thick] (s4) -- (s5);
+        \draw[->, thick] (s5) -- (s6);
+        \draw[->, thick] (s6) -- (s7);
+        \draw[->, thick] (s7) -- (s8);
+        \draw[->, thick] (s3.west) .. controls +(-2.0,0) and +(-2.0,0) .. (s2.west);
+    \end{tikzpicture}
+    \caption{Activity Diagram}
+\end{figure}
+
+\subsection{Sequence Diagram}
+The sequence diagram illustrates the time-ordered interaction between all system components during a typical analysis request. The key actors and components involved are: the User, the Next.js Frontend, the FastAPI Backend, the LlamaIndex RAG Engine, the Frontier LLM API (Claude Sonnet / GPT-4), the BioMedLM API, and the Guideline Engine.
+
+The interaction sequence proceeds as follows:
+
+\begin{enumerate}
+    \item \textbf{File Upload:} The User submits a file through the Frontend. The Frontend sends a POST request to the Backend's \texttt{/api/v1/analyse} endpoint.
+    \item \textbf{Validation and Extraction:} The Backend validates the file and routes it to the appropriate text extraction pipeline. Extracted text is returned to the main orchestrator.
+    \item \textbf{Indexing and Retrieval:} The Backend sends the extracted text to the LlamaIndex RAG Engine for chunking, embedding, and indexing. A structured query is executed, and the top-k relevant chunks are returned.
+    \item \textbf{First LLM Call (BioMedLM):} The Backend sends the retrieved context to the BioMedLM API with a structured extraction prompt. BioMedLM returns a JSON object containing identified parameters, values, reference ranges, and clinical annotations.
+    \item \textbf{Second LLM Call (Frontier Model):} The Backend sends the BioMedLM outputs alongside the original context to the Frontier LLM API with a lay-language summarisation prompt. The Frontier LLM returns a JSON object containing the summary, key observations, and recommendations.
+    \item \textbf{Guideline Mapping:} The Backend passes the merged LLM output to the Guideline Engine. The engine performs rule-based mapping and returns augmented output with guidance steps.
+    \item \textbf{Response:} The Backend serialises the final structured response and returns it to the Frontend, which renders it for the User. The in-memory index is then destroyed.
+\end{enumerate}
+
+All LLM API calls are performed asynchronously over HTTPS, with timeouts configured at 30 seconds per call. The BioMedLM call is executed before the Frontier LLM call because the latter's prompt depends on the structured parameter output from the former.
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[>=Latex, node distance=1.5cm]
+        \tikzset{lifeline/.style={draw, thin}, actor/.style={rectangle, draw, rounded corners, fill=gray!10, minimum width=2.2cm, minimum height=0.8cm, align=center}}
+        \node[actor] (u) at (0,0) {User};
+        \node[actor] (f) at (3.0,0) {Frontend};
+        \node[actor] (b) at (6.0,0) {Backend};
+        \node[actor] (r) at (9.0,0) {RAG Engine};
+        \node[actor] (m) at (12.0,0) {BioMedLM};
+        \node[actor] (g) at (15.0,0) {Guideline Engine};
+        \foreach \x in {u,f,b,r,m,g} {\draw[lifeline] (\x.south) -- ++(0,-6.0);}
+        \draw[->] (u) -- node[above]{upload report} (f);
+        \draw[->] (f) -- node[above]{POST /analyse} (b);
+        \draw[->] (b) -- node[above]{chunk + retrieve} (r);
+        \draw[->] (r) -- node[above]{relevant context} (m);
+        \draw[->] (m) -- node[above]{clinical JSON} (b);
+        \draw[->] (b) -- node[above]{flagged values} (g);
+        \draw[->] (g) -- node[above]{guidance + disclaimer} (b);
+        \draw[->] (b) -- node[above]{analysis response} (f);
+        \draw[->] (f) -- node[above]{display output} (u);
+    \end{tikzpicture}
+    \caption{Sequence Diagram}
+\end{figure}
+
+\section{Data Flow Diagram (DFD)}
+The Data Flow Diagram provides a structured analysis of how data moves through the system. Two levels of DFD are presented.
+
+\paragraph{Level-0 DFD (Context Diagram)}
+The Level-0 DFD depicts the entire ReportRx system as a single process --- the ReportRx Analysis Engine. The primary external entity is the User, who provides a Medical Report (PDF or Image) as input and receives a Structured Analysis Report as output. A secondary external entity is the LLM API Provider (Anthropic / OpenAI), which provides inference services. The single process encapsulates all internal operations: document ingestion, text extraction, RAG indexing and retrieval, dual-LLM inference, guideline mapping, and output formatting.
+
+\paragraph{Level-1 DFD}
+The Level-1 DFD decomposes the ReportRx Analysis Engine into four distinct sub-processes:
+
+\begin{enumerate}
+    \item \textbf{Process 1 --- Document Ingestion and Text Extraction (P1):} Accepts the raw uploaded file, validates its format and size, and extracts plain text using the appropriate parser. Outputs: Normalised text string. Data stores: None (ephemeral).
+    \item \textbf{Process 2 --- RAG Indexing and Retrieval (P2):} Accepts the extracted text, splits it into overlapping chunks, generates embeddings, and stores them in an in-memory vector index. Executes a structured retrieval query and returns the most relevant chunks. Data stores: In-Memory Vector Index.
+    \item \textbf{Process 3 --- Dual-LLM Inference (P3):} Accepts retrieved document chunks, invokes BioMedLM for clinical parameter extraction and the frontier LLM for summarisation, and merges the results into a structured JSON. Data stores: None.
+    \item \textbf{Process 4 --- Guideline Engine and Output Formatting (P4):} Accepts the merged LLM output, performs rule-based mapping against the guideline rule base, deduplicates guidance items, appends the disclaimer, and formats the final structured response. Data stores: Guideline Rule Base (JSON).
+\end{enumerate}
+
+Data stores in the Level-1 DFD include the In-Memory Vector Index (ephemeral, destroyed after each analysis) and the Guideline Rule Base (persistent JSON configuration file).
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[>=Latex, node distance=1.4cm]
+        \tikzset{proc/.style={rectangle, draw, rounded corners, align=center, minimum width=2.9cm, minimum height=0.9cm, fill=blue!7}, store/.style={cylinder, shape border rotate=90, draw, minimum width=1.7cm, minimum height=1.1cm, aspect=0.35, fill=orange!12}, entity/.style={rectangle, draw, rounded corners, align=center, minimum width=2.4cm, minimum height=0.9cm, fill=gray!8}}
+        \node[entity] (user) {User};
+        \node[proc, right=2.1cm of user] (p1) {P1 Ingestion and Extraction};
+        \node[proc, right=2.5cm of p1] (p2) {P2 RAG Retrieval};
+        \node[proc, right=2.5cm of p2] (p3) {P3 Dual-LLM Inference};
+        \node[proc, right=2.5cm of p3] (p4) {P4 Guideline Mapping};
+        \node[entity, right=2.2cm of p4] (out) {Structured Analysis};
+        \node[store, below=1.6cm of p2] (ds1) {Vector Index};
+        \node[store, below=1.6cm of p4] (ds2) {Rule Base};
+        \draw[->, thick] (user) -- node[above]{report file} (p1);
+        \draw[->, thick] (p1) -- node[above]{plain text} (p2);
+        \draw[->, thick] (p2) -- node[above]{relevant chunks} (p3);
+        \draw[->, thick] (p3) -- node[above]{flagged values} (p4);
+        \draw[->, thick] (p4) -- node[above]{final response} (out);
+        \draw[<->, thick] (p2) -- (ds1);
+        \draw[<->, thick] (p4) -- (ds2);
+    \end{tikzpicture}
+    \caption{Data Flow Diagram}
+\end{figure}
+
+\section{ER Diagram}
+The Entity-Relationship (ER) diagram for ReportRx models the key data abstractions that underpin the system's document processing pipeline. Since the application follows a stateless, privacy-preserving design philosophy --- no patient data is persisted beyond the lifetime of a single analysis session --- the ER model is intentionally lean and focused on the logical flow rather than persistent storage schemas.
+
+The primary entities and their attributes are:
+
+\begin{itemize}
+    \item \textbf{User}: Represents the individual who submits a medical report for analysis. Key attributes include a session identifier and request timestamp. No user account or personal identifiable information is stored.
+    \item \textbf{Medical Report}: Represents the uploaded document. Attributes include a unique request identifier, file type (PDF or image), upload timestamp, extracted plain-text content, and processing status.
+    \item \textbf{Analysis Result}: The structured output generated after processing. Attributes include analysis ID, a lay-language summary, a list of key observations, flagged out-of-range parameters (with name, value, reference range, direction, and clinical note), general health guidance steps, and the mandatory professional consultation disclaimer.
+    \item \textbf{Guideline Rule}: A reference entity representing entries in the rule base. Attributes include rule ID, clinical parameter name, threshold direction (high/low), severity level, and one or more standard guidance text strings.
+\end{itemize}
+
+The relationships are straightforward: a single User submission triggers the creation of one Medical Report record; each Medical Report is processed to produce exactly one Analysis Result; and the Analysis Result references zero or more Guideline Rules to assemble the final guidance output. There is no direct relationship between different users' sessions, and no historical aggregation is performed.
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[>=Latex, node distance=1.4cm]
+        \tikzset{entity/.style={rectangle, draw, rounded corners, align=center, minimum width=3.2cm, minimum height=1cm, fill=blue!7}}
+        \node[entity] (user) {User\\(session id)};
+        \node[entity, right=2.6cm of user] (report) {Medical Report\\(file type, timestamp)};
+        \node[entity, right=2.6cm of report] (result) {Analysis Result\\(summary, flags, guidance)};
+        \node[entity, below=1.8cm of report] (rule) {Guideline Rule\\(parameter, severity, advice)};
+        \draw[-Latex, thick] (user) -- node[above]{1 submits} (report);
+        \draw[-Latex, thick] (report) -- node[above]{1 produces} (result);
+        \draw[-Latex, thick] (result) -- node[right]{0..* references} (rule);
+        \draw[-Latex, thick] (rule) -- node[left]{maps to} (result);
+    \end{tikzpicture}
+    \caption{Entity-Relationship Diagram}
+\end{figure}
+
+\section{Database Design}
+ReportRx does not employ a persistent relational database for user data or uploaded documents, in accordance with the core privacy requirement that documents not be stored permanently. The only persistent data store is the Guideline Rule Base, a structured JSON configuration file that maps clinical parameter names and out-of-range conditions to standardised general health guidance text. The schema of this rule base is as follows:
+
+\begin{verbatim}
+{
+  "rules": [
+    {
+      "parameter": "Hemoglobin",
+      "condition": "low",
+      "severity": "moderate",
+      "guidance": [
+        "Iron-rich diet (leafy greens, legumes, red meat)",
+        "Consider vitamin B12 supplementation after consulting physician",
+        "Schedule follow-up Complete Blood Count in 4-6 weeks"
+      ]
+    },
+    ...
+  ]
+}
+\end{verbatim}
+
+The rule base currently contains mappings for 40+ clinical parameters covering the supported report types (CBC, BMP, CMP, lipid panel, TFT, urinalysis). Each rule entry specifies the parameter name (matching the clinical nomenclature expected from the LLM output), the condition direction (high/low), a severity level (mild/moderate/severe), and an ordered list of evidence-based guidance text strings. The JSON file is loaded into memory at application startup and remains resident for the application's lifetime, providing O(1) lookup during the guideline mapping phase.
+
+The in-memory vector index, which stores document chunk embeddings during each analysis session, is ephemeral. It is created when a report is submitted, used for the duration of the retrieval phase, and explicitly destroyed after the analysis response is delivered. No data from the vector index is persisted to disk or retained between sessions.
+

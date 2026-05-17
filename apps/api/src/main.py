@@ -6,9 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.config import get_settings, validate_settings
-from src.database import engine, Base, SessionLocal
-from src.models import User
-from src.auth import verify_token, verify_auth0_access_token
+from src.database import engine, Base
+from src.auth import verify_token
 from src.ai_clients import create_ai_clients
 from src.vector_store import start_qdrant, stop_qdrant
 from src.health import log_service_health
@@ -119,18 +118,7 @@ async def auth_middleware(request: Request, call_next):
     if request.url.path.startswith("/api/auth") or request.url.path == "/":
         return await call_next(request)
 
-    token = None
-    is_bearer = False
-
-    auth_header = request.headers.get("authorization")
-    if auth_header:
-        parts = auth_header.split(" ", 1)
-        if len(parts) == 2 and parts[0].lower() == "bearer":
-            token = parts[1].strip()
-            is_bearer = True
-
-    if not token:
-        token = request.cookies.get("token")
+    token = request.cookies.get("token")
 
     if not token:
         response = JSONResponse(status_code=401, content={"error": "Unauthorized"})
@@ -139,25 +127,9 @@ async def auth_middleware(request: Request, call_next):
         return response
 
     try:
-        if is_bearer:
-            profile = await verify_auth0_access_token(token)
-            email = profile.get("email") or f"auth0:{profile['sub']}"
-            db = SessionLocal()
-            try:
-                user = db.query(User).filter(User.email == email).first()
-                if not user:
-                    user = User(id=str(profile["sub"]), email=email, password_hash=profile["sub"])
-                    db.add(user)
-                    db.commit()
-                    db.refresh(user)
-                request.state.user_id = user.id
-                request.state.user_email = user.email
-            finally:
-                db.close()
-        else:
-            payload = verify_token(token)
-            request.state.user_id = payload["sub"]
-            request.state.user_email = payload["email"]
+        payload = verify_token(token)
+        request.state.user_id = payload["sub"]
+        request.state.user_email = payload["email"]
     except Exception as e:
         get_logger("auth").warning(f"Auth verification failed: {e}")
         response = JSONResponse(status_code=401, content={"error": "Unauthorized"})

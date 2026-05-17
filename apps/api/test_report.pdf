@@ -1,0 +1,61 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 500 >>
+stream
+BT
+/F1 16 Tf
+50 700 Td
+(Medical Report - Test Document) Tj
+0 -30 Td
+/F1 10 Tf
+(PATIENT INFORMATION:) Tj
+0 -15 Td
+(Name: John Doe) Tj
+0 -15 Td
+(DOB: 01/15/1985) Tj
+0 -15 Td
+(CLINICAL SUMMARY:) Tj
+0 -15 Td
+(Patient presents with fatigue and shortness of breath.) Tj
+0 -15 Td
+(LABORATORY RESULTS:) Tj
+0 -15 Td
+(Blood Pressure: 120/80 mmHg - Normal) Tj
+0 -15 Td
+(Hemoglobin: 14.5 g/dL - Normal) Tj
+0 -15 Td
+(RECOMMENDATIONS:) Tj
+0 -15 Td
+(1. Increase physical activity) Tj
+0 -15 Td
+(2. Follow up in 2 weeks) Tj
+0 -15 Td
+(3. Maintain adequate hydration) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000010 00000 n 
+0000000074 00000 n 
+0000000133 00000 n 
+0000000258 00000 n 
+0000000809 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+881
+%%EOF

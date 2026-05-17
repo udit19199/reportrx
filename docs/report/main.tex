@@ -1,0 +1,153 @@
+% ======================================================================
+% JECRC University -- Minor Project Report Template (LaTeX)
+% Department of Computer Science and Engineering
+% Session: 2025--26
+% ======================================================================
+\documentclass[12pt,a4paper]{report}
+
+% ----------------------------------------------------------------------
+% Packages
+% ----------------------------------------------------------------------
+\usepackage[a4paper,top=1in,bottom=1in,left=1.5in,right=1in]{geometry}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\newfontfamily{\garamondfont}{Baskerville}
+\usepackage{setspace}                             % line spacing
+\usepackage{graphicx}                             % figures
+\usepackage{caption}                              % caption control
+\usepackage{booktabs}                             % professional tables
+\usepackage{array}                                % table extras
+\usepackage{amsmath}                              % math helpers
+\usepackage{titlesec}                             % heading formatting
+\usepackage{titletoc}                             % TOC formatting
+\usepackage{hyperref}                             % clickable links
+\usepackage{enumitem}                             % list control
+\usepackage{indentfirst}                          % indent first paragraph
+\usepackage{lipsum}                               % dummy text (REMOVE for final)
+\usepackage{tikz}                                 % diagrams
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,backgrounds}
+\usepackage{ragged2e}                             % better justification control
+
+% 1.5 line spacing for body text
+\onehalfspacing
+
+% ----------------------------------------------------------------------
+% Font size commands
+% ----------------------------------------------------------------------
+\newcommand{\chaptertitlefont}{\fontsize{18pt}{21.6pt}\selectfont\bfseries}
+\newcommand{\firstorderfont}{\fontsize{16pt}{19.2pt}\selectfont\bfseries}
+\newcommand{\secondorderfont}{\fontsize{14pt}{16.8pt}\selectfont\bfseries}
+\newcommand{\thirdorderfont}{\fontsize{12pt}{14.4pt}\selectfont\bfseries}
+\newcommand{\abstracttitlefont}{\fontsize{16pt}{19.2pt}\selectfont\bfseries\itshape}
+\newcommand{\abstracttextfont}{\fontsize{12pt}{14.4pt}\selectfont\itshape}
+\newcommand{\chapterrule}{\noindent\rule{\linewidth}{2.25pt}}
+
+% Caption font: Garamond 10pt Bold Centered
+\DeclareCaptionFont{mycaptionfont}{\garamondfont\fontsize{10pt}{12pt}\selectfont\bfseries}
+\captionsetup{font=mycaptionfont,justification=centering}
+
+% ----------------------------------------------------------------------
+% Heading styles via titlesec
+% ----------------------------------------------------------------------
+% Chapter (numbered): 18pt bold, Left-aligned, thick rule below
+\titleformat{\chapter}[block]
+  {\raggedright\chaptertitlefont}
+  {\thechapter.\hspace{0.5em}}
+  {0pt}
+  {}[\vspace{0.5\baselineskip}\chapterrule]
+\titlespacing*{\chapter}{0pt}{0pt}{12pt}
+
+% Chapter (unnumbered - DECLARATION, CERTIFICATE, etc.): 18pt bold, Left-aligned, thick rule below
+\titleformat{name=\chapter,numberless}[block]
+  {\raggedright\chaptertitlefont}
+  {}
+  {0pt}
+  {}[\vspace{0.5\baselineskip}\chapterrule]
+\titlespacing*{name=\chapter,numberless}{0pt}{12pt}{12pt}
+
+% Section (1st order): 16pt bold, Left-aligned, 12pt before
+\titleformat{\section}
+  {\raggedright\firstorderfont}
+  {\thesection\hspace{0.5em}}
+  {0pt}
+  {}
+\titlespacing*{\section}{0pt}{12pt}{0pt}
+
+% Subsection (2nd order): 14pt bold, Left-aligned, 12pt before
+\titleformat{\subsection}
+  {\raggedright\secondorderfont}
+  {\thesubsection\hspace{0.5em}}
+  {0pt}
+  {}
+\titlespacing*{\subsection}{0pt}{12pt}{0pt}
+
+% Subsubsection (3rd order): 12pt bold, Left-aligned, 12pt before
+\titleformat{\subsubsection}
+  {\raggedright\thirdorderfont}
+  {\thesubsubsection\hspace{0.5em}}
+  {0pt}
+  {}
+\titlespacing*{\subsubsection}{0pt}{12pt}{0pt}
+
+
+
+% ----------------------------------------------------------------------
+% Hyperref setup
+% ----------------------------------------------------------------------
+\hypersetup{
+    colorlinks=false,
+    pdfborder={0 0 0},
+    pdftitle={Minor Project Report},
+    pdfauthor={Student Name},
+    pdfsubject={Minor Project Report -- JECRC University}
+}
+
+% ----------------------------------------------------------------------
+% Custom list spacing
+% ----------------------------------------------------------------------
+\setlist{nosep}
+
+% ======================================================================
+% DOCUMENT BEGINS
+% ======================================================================
+\begin{document}
+\pagestyle{plain}
+
+% ======================================================================
+% FRONTMATTER
+% ======================================================================
+\input{frontmatter/cover}
+\input{frontmatter/declaration}
+\clearpage
+\input{frontmatter/certificate}
+\clearpage
+\input{frontmatter/acknowledgement}
+\clearpage
+\input{frontmatter/abstract}
+\clearpage
+
+\input{frontmatter/toc.tex}
+
+% ======================================================================
+% ABBREVIATIONS
+% ======================================================================
+\input{frontmatter/abbreviations}
+\clearpage
+
+% ======================================================================
+% Switch to Arabic page numbering from Chapter 1 onward
+% ======================================================================
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+% ======================================================================
+% CHAPTERS
+% ======================================================================
+\input{chapters/1-introduction}
+\input{chapters/2-literature-review}
+\input{chapters/3-system-design}
+\input{chapters/4-implementation}
+\input{chapters/5-testing-results}
+\input{chapters/6-conclusion-future-work}
+
+\end{document}

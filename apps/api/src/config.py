@@ -12,8 +12,6 @@ class Settings(BaseSettings):
     database_url: str = "file:./prisma/dev.db"
     jwt_secret: str = ""
     jwt_expires_minutes: int = 30
-    auth0_domain: str = ""
-    auth0_audience: str = ""
     upload_dir: str = "uploads"
     max_upload_mb: int = 10
     ai_provider: str = "openai"
@@ -43,10 +41,6 @@ def validate_settings(settings: Settings) -> None:
         missing.append("DATABASE_URL")
     if not settings.jwt_secret:
         missing.append("JWT_SECRET")
-    if not settings.auth0_domain:
-        missing.append("AUTH0_DOMAIN")
-    if not settings.auth0_audience:
-        missing.append("AUTH0_AUDIENCE")
     if settings.ai_provider.lower() == "openai" and not settings.openai_api_key:
         missing.append("OPENAI_API_KEY")
     if settings.embed_provider.lower() == "openai" and not settings.openai_api_key:

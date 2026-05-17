@@ -1,0 +1,19 @@
+% ======================================================================
+% ABSTRACT (page iv)
+% ======================================================================
+\setcounter{page}{4}
+\thispagestyle{plain}
+
+% Abstract heading: 16pt Bold+Italic, Left aligned (per spec)
+{\abstracttitlefont ABSTRACT}
+\addcontentsline{toc}{chapter}{ABSTRACT}
+\vspace{24pt}  % Two blank lines (12pt each) after heading
+
+\noindent\begin{minipage}{0.95\textwidth}
+\justifying
+\abstracttextfont
+Medical reports often use clinical terminology that many patients cannot interpret, causing anxiety and delays in follow-up. ReportRx is an AI-powered web application that lets users upload PDF or image reports and receive clear, lay-language summaries with general health guidance. Built with a Next.js frontend and a FastAPI backend, it uses a dual-LLM architecture: a frontier model (Claude Sonnet / GPT-4) handles summarisation, while BioMedLM helps resolve clinical terms. A Retrieval-Augmented Generation (RAG) pipeline implemented with LlamaIndex grounds responses in the uploaded document and a curated medical knowledge base to improve accuracy. A rule-based guideline engine maps findings to standard public health recommendations, and ephemeral document handling helps protect privacy. The browser-based workflow requires no account creation, so patients can understand common diagnostic reports while waiting for clinical review across desktop or mobile devices. Every result includes a disclaimer advising users to consult a qualified medical professional. The project demonstrates an ethical application of RAG and multi-model LLM pipelines for accessible healthcare information.
+
+\vspace{12pt}
+\noindent\textbf{Keywords:} Medical Report Analysis, Retrieval-Augmented Generation, Large Language Models, Healthcare AI, LlamaIndex, BioMedLM, FastAPI, Next.js
+\end{minipage}
