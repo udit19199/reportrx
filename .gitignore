@@ -12,3 +12,4 @@ apps/**/tsconfig.tsbuildinfo
 uploads/
 qdrant_storage/
 
+qdrant_storage/
