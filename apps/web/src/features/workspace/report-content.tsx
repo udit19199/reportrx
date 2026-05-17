@@ -1,10 +1,9 @@
 "use client";
 
-import { FileX2, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Loader2, FileX2 } from "lucide-react";
 import type { ApiReport, TrendDataPoint } from "@/lib/api";
-import { ReportDetailGrid } from "./components/report-detail-grid";
+import { ReportDetailGrid } from "./report-detail-grid";
 
 type ReportContentProps = {
   report: ApiReport;
@@ -16,44 +15,14 @@ type ReportContentProps = {
   trends?: Record<string, TrendDataPoint[]>;
   onQueryChange: (value: string) => void;
   onAnalyze: () => void;
+  onOpenDrawer?: () => void;
 };
 
-const STAGE_LABELS: Record<string, string> = {
-  queued: "Queued for processing",
-  parsing: "Parsing PDF document",
-  embedding: "Generating vector embeddings",
-  extracting: "Extracting lab values",
-  interpreting: "Interpreting results",
-  saving: "Finalizing report",
-  complete: "Complete",
-  failed: "Failed",
-};
-
-const getStatusText = (report: ApiReport): string => {
-  const { status, currentStage, errorMessage } = report;
-
-  if (status === "ready") {
-    return "Review your report summary, insights, and recommended next steps.";
-  }
-
-  if (status === "processing" || status === "pending") {
-    const stageLabel = currentStage ? STAGE_LABELS[currentStage] : null;
-    return stageLabel
-      ? `${stageLabel}…`
-      : "Your report is being analyzed. This may take a minute.";
-  }
-
-  if (status === "failed") {
-    return errorMessage ?? "This report could not be processed.";
-  }
-
-  return "This report could not be processed.";
-};
-
-const statusVariant = (status: ApiReport["status"]) => {
-  if (status === "failed") return "destructive";
-  if (status === "ready") return "default";
-  return "secondary";
+const STATUS_LABEL: Record<string, { text: string; dot: string }> = {
+  ready: { text: "Analyzed", dot: "bg-emerald-500" },
+  processing: { text: "Processing", dot: "bg-amber-500" },
+  pending: { text: "Processing", dot: "bg-amber-500" },
+  failed: { text: "Failed", dot: "bg-red-500" },
 };
 
 export function ReportContent({
@@ -66,51 +35,96 @@ export function ReportContent({
   trends,
   onQueryChange,
   onAnalyze,
+  onOpenDrawer,
 }: ReportContentProps) {
+  const [showFullData, setShowFullData] = useState(false);
+  const status = STATUS_LABEL[report.status] ?? { text: report.status, dot: "bg-[var(--primary)]/40" };
   const isProcessing = report.status === "processing" || report.status === "pending";
 
   return (
-    <section className="min-h-screen bg-background px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
-      <Card className="flex min-h-[calc(100vh-2rem)] flex-col border-border/60 bg-card/90 shadow-sm backdrop-blur md:min-h-[calc(100vh-3rem)] lg:min-h-[calc(100vh-4rem)]">
-        <CardHeader className="border-b border-border/60 px-6 py-5">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-2xl font-display">{report.filename}</CardTitle>
-                {isProcessing && (
-                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                )}
-                {report.status === "failed" && (
-                  <FileX2 className="size-4 text-destructive" />
-                )}
-              </div>
-              <CardDescription className="mt-1">
-                {getStatusText(report)}
-                {isProcessing && report.currentStage && (
-                  <span className="ml-2 inline-flex items-center gap-1">
-                    <span className="inline-block size-1.5 rounded-full bg-primary animate-pulse" />
-                  </span>
-                )}
-              </CardDescription>
-            </div>
-            <Badge variant={statusVariant(report.status)}>{report.status}</Badge>
+    <div className="min-h-screen">
+      {/* ── Sticky Header ────────────────────────── */}
+      <header className="app-top-bar">
+        <div className="app-top-bar-inner mx-auto max-w-5xl">
+          {/* Left: date + status */}
+          <div className="flex min-w-0 items-center gap-3">
+            <time
+              dateTime={report.uploadedAt}
+              className="text-lg font-medium text-[var(--foreground)]"
+            >
+              {new Date(report.uploadedAt).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </time>
+            <span className="flex items-center gap-1.5 rounded-full border border-[var(--border)]/40 bg-[var(--card)] px-2.5 py-0.5 text-[0.625rem] font-medium tracking-wide text-[var(--muted-foreground)]">
+              <span className={`inline-block size-1.5 rounded-full ${status.dot} ${isProcessing ? "animate-pulse" : ""}`} />
+              {status.text}
+            </span>
           </div>
-        </CardHeader>
 
-        <CardContent className="flex flex-1 flex-col gap-6 px-6 py-6">
+          {/* Right: actions */}
+          <div className="flex items-center gap-4">
+
+            {report.status === "ready" && (
+              <button
+                onClick={() => setShowFullData(!showFullData)}
+                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+              >
+                {showFullData ? "Collapse" : "Full data"}
+              </button>
+            )}
+
+            {onOpenDrawer && (
+              <button
+                onClick={onOpenDrawer}
+                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+              >
+                <kbd className="rounded border border-[var(--border)] bg-[var(--muted)]/50 px-1.5 py-0.5 text-xs font-medium">
+                  ⌘K
+                </kbd>
+                <span className="hidden sm:inline">Reports</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* ── Content ──────────────────────────────── */}
+      <div className="mx-auto max-w-5xl px-6 py-6 md:px-8 lg:px-12 lg:py-8">
+        {isProcessing && (
+          <div className="flex flex-col items-center justify-center gap-3 py-20">
+            <Loader2 className="size-5 animate-spin text-[var(--muted-foreground)]" />
+            <p className="text-sm text-[var(--muted-foreground)]">Analyzing report…</p>
+          </div>
+        )}
+
+        {report.status === "failed" && (
+          <div className="flex flex-col items-center justify-center gap-3 py-20">
+            <FileX2 className="size-5 text-destructive" />
+            <p className="text-sm font-medium text-[var(--foreground)]">Processing failed</p>
+            <p className="text-xs text-[var(--muted-foreground)]">
+              {report.errorMessage ?? "Please try uploading the report again."}
+            </p>
+          </div>
+        )}
+
+        {report.status === "ready" && report.parsedData && (
           <ReportDetailGrid
-            report={report}
+            data={report.parsedData}
+            trends={trends}
+            showFullData={showFullData}
             query={query}
+            consentGranted={consentGranted}
+            analyzing={analyzing}
             answer={answer}
             sources={sources}
-            analyzing={analyzing}
-            consentGranted={consentGranted}
-            trends={trends}
             onQueryChange={onQueryChange}
             onAnalyze={onAnalyze}
           />
-        </CardContent>
-      </Card>
-    </section>
+        )}
+      </div>
+    </div>
   );
 }

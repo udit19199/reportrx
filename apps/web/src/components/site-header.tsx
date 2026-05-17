@@ -6,26 +6,26 @@ export async function SiteHeader() {
   const session = await getSession();
 
   return (
-    <header className="fixed top-0 z-50 w-full transition-all duration-500 bg-transparent">
-      <div className="absolute inset-0 bg-background/40 backdrop-blur-xl border-b border-white/20"></div>
-      <div className="container relative mx-auto flex h-20 max-w-7xl items-center justify-between px-6 md:px-12">
-        <div className="flex items-center">
-          <Link href="/" className="group flex items-center space-x-2">
-            <span className="font-display text-2xl font-medium tracking-tight text-foreground transition-opacity group-hover:opacity-70">
-              ReportRx.
-            </span>
-          </Link>
-        </div>
+    <header className="app-top-bar app-top-bar--fixed z-50">
+      <div className="app-top-bar-inner mx-auto max-w-[1400px]">
+        {/* Logo */}
+        <Link href="/" className="group flex items-center gap-2">
+          <span className="font-display text-xl font-medium tracking-tight text-[var(--foreground)] transition-opacity duration-300 group-hover:opacity-70">
+            ReportRx
+          </span>
+          <span className="text-[var(--primary)] opacity-40">✦</span>
+        </Link>
 
+        {/* Navigation */}
         <nav className="flex items-center gap-3 sm:gap-6">
           {session ? (
             <>
-              <span className="hidden text-sm text-foreground/70 sm:inline">
-                Welcome, {session.user.email.split("@")[0]}.
+              <span className="hidden text-sm text-[var(--muted-foreground)] sm:inline">
+                {session.user.email.split("@")[0]}
               </span>
               <Link
                 href="/app"
-                className="text-sm font-medium tracking-wide text-foreground/80 hover:text-foreground transition-colors"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
               >
                 Workspace
               </Link>
@@ -35,13 +35,13 @@ export async function SiteHeader() {
             <>
               <Link
                 href="/auth/login"
-                className="text-sm font-medium tracking-wide text-foreground/80 hover:text-foreground transition-colors"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
               >
                 Sign In
               </Link>
               <Link
                 href="/auth/signup"
-                className="lux-button rounded-full bg-primary px-6 py-2.5 text-sm font-medium tracking-wide text-primary-foreground"
+                className="inline-flex h-9 items-center rounded-full bg-[var(--primary)] px-5 text-sm font-medium text-[var(--primary-foreground)] transition-all duration-300 hover:opacity-90 hover:-translate-y-0.5"
               >
                 Get Started
               </Link>

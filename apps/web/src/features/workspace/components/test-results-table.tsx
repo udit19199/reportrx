@@ -1,11 +1,57 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import dynamic from "next/dynamic";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { RangeBar } from "./range-bar";
+import { ResultStatusLegend } from "./result-status-legend";
 import { TrendBadge } from "./trend-badge";
-import { TrendModal } from "./trend-modal";
-import { TrendDataPoint } from "@/lib/api";
+import {
+  resultMarkerColor,
+  sortByResultSeverity,
+} from "../result-status";
+import type { TrendDataPoint } from "@/lib/api";
+
+const TrendModal = dynamic(
+  () => import("./trend-modal").then((mod) => mod.TrendModal),
+  { ssr: false }
+);
+
+/* ── Mini Sparkline ───────────────────────────────── */
+
+function MiniSparkline({
+  data,
+  color = "var(--result-normal)",
+}: {
+  data: TrendDataPoint[];
+  color?: string;
+}) {
+  const chartData = useMemo(() => {
+    return data
+      .map((d) => ({
+        value: parseFloat(d.value?.replace(/[^0-9.-]/g, "") ?? ""),
+      }))
+      .filter((d) => !isNaN(d.value));
+  }, [data]);
+
+  if (chartData.length < 2) return null;
+
+  return (
+    <div className="h-6 w-16 shrink-0 overflow-hidden">
+      <ResponsiveContainer width={64} height={24}>
+        <LineChart data={chartData}>
+          <Line
+            type="monotone"
+            dataKey="value"
+            stroke={color}
+            strokeWidth={1.5}
+            dot={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 export type TestResult = {
   test_name: string;
@@ -25,42 +71,51 @@ const FILTERS = [
   { key: "all", label: "All" },
   { key: "normal", label: "Normal" },
   { key: "flagged", label: "Flagged" },
-  { key: "critical", label: "Critical" },
 ] as const;
 
-export function TestResultsTable({ tests, trends = {} }: TestResultsTableProps) {
+export function TestResultsTable({
+  tests,
+  trends = {},
+}: TestResultsTableProps) {
   const [filter, setFilter] = useState<string>("all");
-  const [trendModal, setTrendModal] = useState<{ testName: string; history: TrendDataPoint[]; current: TestResult } | null>(null);
+  const [trendModal, setTrendModal] = useState<{
+    testName: string;
+    history: TrendDataPoint[];
+    current: TestResult;
+  } | null>(null);
 
   const filtered = useMemo(() => {
-    if (filter === "all") return tests;
-    if (filter === "flagged") return tests.filter((t) => t.flagged && t.status !== "critical");
-    if (filter === "critical") return tests.filter((t) => t.status === "critical");
-    if (filter === "normal") return tests.filter((t) => !t.flagged);
-    return tests;
+    let list = tests;
+    if (filter === "flagged") {
+      list = tests.filter((t) => t.flagged || t.status !== "normal");
+    } else if (filter === "normal") {
+      list = tests.filter((t) => t.status === "normal" && !t.flagged);
+    }
+    return sortByResultSeverity(list);
   }, [tests, filter]);
 
   return (
     <>
-      <div className="flex items-center gap-2 mb-4">
+      <ResultStatusLegend className="mb-4" />
+
+      {/* Filter buttons */}
+      <div className="mb-4 flex items-center gap-2">
         {FILTERS.map((f) => {
           const count =
             f.key === "all"
               ? tests.length
               : f.key === "flagged"
-                ? tests.filter((t) => t.flagged && t.status !== "critical").length
-                : f.key === "critical"
-                  ? tests.filter((t) => t.status === "critical").length
-                  : tests.filter((t) => !t.flagged).length;
+                ? tests.filter((t) => t.flagged || t.status !== "normal").length
+                : tests.filter((t) => t.status === "normal" && !t.flagged).length;
 
           return (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 filter === f.key
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border/60 bg-background text-muted-foreground hover:bg-muted"
+                  ? "border-[var(--primary)]/30 bg-[var(--primary)]/10 text-[var(--primary)]"
+                  : "border-[var(--border)]/60 bg-[var(--card)] text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
               }`}
             >
               {f.label}
@@ -70,21 +125,32 @@ export function TestResultsTable({ tests, trends = {} }: TestResultsTableProps) 
         })}
       </div>
 
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60">
-              <th className="pb-2 text-left font-medium text-muted-foreground">Test</th>
-              <th className="pb-2 text-left font-medium text-muted-foreground">Value</th>
-              <th className="pb-2 text-left font-medium text-muted-foreground">Range</th>
-              <th className="pb-2 text-left font-medium text-muted-foreground">Status</th>
-              <th className="pb-2 text-left font-medium text-muted-foreground">Trend</th>
+            <tr className="border-b border-[var(--border)]/40">
+              <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
+                Test
+              </th>
+              <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
+                Value
+              </th>
+              <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
+                Range
+              </th>
+              <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
+                Trend
+              </th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-muted-foreground">
+                <td
+                  colSpan={4}
+                  className="py-8 text-center text-sm text-[var(--muted-foreground)]"
+                >
                   No tests match the selected filter.
                 </td>
               </tr>
@@ -92,32 +158,49 @@ export function TestResultsTable({ tests, trends = {} }: TestResultsTableProps) 
               filtered.map((t, i) => {
                 const history = trends[t.test_name] ?? [];
                 return (
-                  <tr key={i} className="border-b border-border/30">
-                    <td className="py-2.5 font-medium">{t.test_name}</td>
-                    <td className="py-2.5">
-                      <RangeBar value={t.value} referenceRange={t.reference_range} status={t.status} unit={t.unit} />
+                  <tr
+                    key={i}
+                    className="border-b border-[var(--border)]/20 transition-colors hover:bg-[var(--muted)]/30"
+                  >
+                    <td className="py-2.5 pr-3">
+                      <span className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
+                        <span
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: resultMarkerColor(t.status) }}
+                          aria-hidden
+                        />
+                        {t.test_name}
+                      </span>
                     </td>
-                    <td className="py-2.5 text-muted-foreground">{t.reference_range}</td>
-                    <td className="py-2.5">
-                      <Badge
-                        variant={
-                          t.status === "critical"
-                            ? "destructive"
-                            : t.flagged
-                              ? "default"
-                              : "outline"
-                        }
-                        className={t.status === "normal" ? "text-emerald-600" : ""}
-                      >
-                        {t.status}
-                      </Badge>
+                    <td className="py-2.5 pr-3">
+                      <RangeBar
+                        value={t.value}
+                        referenceRange={t.reference_range}
+                        status={t.status}
+                        unit={t.unit}
+                      />
+                    </td>
+                    <td className="py-2.5 pr-3 text-sm text-[var(--muted-foreground)]">
+                      {t.reference_range}
                     </td>
                     <td className="py-2.5">
                       {history.length >= 2 && (
-                        <TrendBadge
-                          history={history}
-                          onClick={() => setTrendModal({ testName: t.test_name, history, current: t })}
-                        />
+                        <button
+                          onClick={() =>
+                            setTrendModal({
+                              testName: t.test_name,
+                              history,
+                              current: t,
+                            })
+                          }
+                          className="group flex items-center gap-2"
+                        >
+                          <MiniSparkline
+                            data={history}
+                            color={resultMarkerColor(t.status)}
+                          />
+                          <TrendBadge history={history} />
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -128,6 +211,7 @@ export function TestResultsTable({ tests, trends = {} }: TestResultsTableProps) 
         </table>
       </div>
 
+      {/* Trend Modal */}
       {trendModal && (
         <TrendModal
           open={!!trendModal}

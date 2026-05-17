@@ -1,71 +1,103 @@
 "use client";
 
-import { useMemo } from "react";
+import { getResultColorKey, resultMarkerColor } from "../result-status";
 
 type RangeBarProps = {
-  value: string | null;
-  referenceRange: string | null;
+  value: string;
+  referenceRange: string;
   status: string;
-  unit?: string | null;
+  unit: string;
+  variant?: "compact" | "inline";
 };
 
-function parseRange(range: string | null): { min: number; max: number } | null {
-  if (!range) return null;
-  const match = range.match(/([0-9.]+)\s*[-–—to]+\s*([0-9.]+)/i);
+function parseRange(range: string): { min: number; max: number } | null {
+  const match = range.match(/([0-9.]+)\s*[-–—]+\s*([0-9.]+)/);
   if (!match) return null;
   return { min: parseFloat(match[1]), max: parseFloat(match[2]) };
 }
 
-export function RangeBar({ value, referenceRange, status, unit }: RangeBarProps) {
-  const parsed = useMemo(() => {
-    const range = parseRange(referenceRange);
-    const numValue = value ? parseFloat(value.replace(/[^0-9.-]/g, "")) : null;
-    if (!range || numValue === null || isNaN(numValue)) return null;
+export function RangeBar({
+  value,
+  referenceRange,
+  status,
+  unit,
+  variant = "compact",
+}: RangeBarProps) {
+  const numValue = parseFloat(value);
+  const range = parseRange(referenceRange);
+  const marker = resultMarkerColor(status);
 
-    const padding = (range.max - range.min) * 0.3;
-    const min = range.min - padding;
-    const max = range.max + padding;
-
-    const rangeStartPct = ((range.min - min) / (max - min)) * 100;
-    const rangeEndPct = ((range.max - min) / (max - min)) * 100;
-    const valuePct = Math.max(0, Math.min(100, ((numValue - min) / (max - min)) * 100));
-
-    return { rangeStartPct, rangeEndPct, valuePct, numValue, range, unit };
-  }, [value, referenceRange, unit]);
-
-  if (!parsed) {
+  if (isNaN(numValue) || !range) {
     return (
-      <span className="text-sm text-muted-foreground">
+      <span className="text-sm font-medium text-[var(--foreground)]">
         {value} {unit}
       </span>
     );
   }
 
-  const dotColor =
-    status === "critical"
-      ? "bg-red-500"
-      : status === "high" || status === "low"
-        ? "bg-amber-500"
-        : "bg-emerald-500";
+  const spanMin = range.min * 0.8;
+  const spanMax = range.max * 1.2;
+  const span = spanMax - spanMin;
+  const markerPct = Math.max(2, Math.min(98, ((numValue - spanMin) / span) * 100));
+  const normalStart = ((range.min - spanMin) / span) * 100;
+  const normalWidth = ((range.max - range.min) / span) * 100;
+
+  if (variant === "inline") {
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="shrink-0 tabular-nums">
+          <span
+            className="text-base font-semibold"
+            style={{ color: marker }}
+          >
+            {value}
+          </span>
+          {unit ? (
+            <span className="ml-1 text-xs text-[var(--muted-foreground)]">
+              {unit}
+            </span>
+          ) : null}
+        </div>
+        <div className="relative h-2 min-w-[88px] flex-1 rounded-full bg-[var(--muted)]">
+          <div
+            className="absolute inset-y-0 rounded-full"
+            style={{
+              left: `${normalStart}%`,
+              width: `${normalWidth}%`,
+              backgroundColor:
+                "color-mix(in srgb, var(--result-normal) 35%, transparent)",
+            }}
+          />
+          <div
+            className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--card)]"
+            style={{ left: `${markerPct}%`, backgroundColor: marker }}
+          />
+        </div>
+        <span className="shrink-0 text-xs tabular-nums text-[var(--muted-foreground)]">
+          {range.min} – {range.max}
+        </span>
+      </div>
+    );
+  }
+
+  const pct = Math.min(((numValue - spanMin) / span) * 100, 100);
+  const colorKey = getResultColorKey(status);
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="relative h-3 w-28 rounded-full bg-muted/50">
+    <div className="flex items-center gap-2">
+      <div className="relative h-1.5 w-20 rounded-full bg-[var(--muted)]">
         <div
-          className="absolute top-0 h-3 rounded-full bg-emerald-200/60 dark:bg-emerald-800/40"
+          className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
           style={{
-            left: `${parsed.rangeStartPct}%`,
-            width: `${parsed.rangeEndPct - parsed.rangeStartPct}%`,
+            width: `${Math.max(2, Math.min(100, pct))}%`,
+            backgroundColor: `var(--result-${colorKey})`,
           }}
         />
-        <div
-          className={`absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background shadow-sm ${dotColor}`}
-          style={{ left: `${parsed.valuePct}%` }}
-        />
       </div>
-      <span className="text-sm font-medium tabular-nums w-16">
-        {parsed.numValue} {parsed.unit}
+      <span className="text-sm font-medium text-[var(--foreground)]">
+        {value}
       </span>
+      <span className="text-xs text-[var(--muted-foreground)]">{unit}</span>
     </div>
   );
 }

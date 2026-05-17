@@ -32,34 +32,71 @@ export function AppHeaderClient({ userEmail }: AppHeaderClientProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 md:px-6">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="font-display text-lg font-medium text-foreground hover:text-primary transition-colors">
-            ReportRx.
+    <header className="app-top-bar z-50">
+      <div className="app-top-bar-inner mx-auto max-w-[1600px]">
+        {/* Left: brand + nav */}
+        <div className="flex items-center gap-6">
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 font-display text-lg font-medium text-[var(--foreground)] transition-colors hover:text-[var(--primary)]"
+          >
+            ReportRx
+            <span className="text-[var(--primary)] opacity-40">✦</span>
           </Link>
-          <Link href="/app" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Workspace
-          </Link>
-          <Link href="/app/trends" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Trends
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link
+              href="/app"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+            >
+              Workspace
+            </Link>
+            <Link
+              href="/app/trends"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+            >
+              Trends
+            </Link>
+          </div>
         </div>
 
+        {/* Right: user menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger nativeButton={false} render={<Avatar className="cursor-pointer" size="sm" />}>
-            <AvatarFallback>{getInitials(userEmail)}</AvatarFallback>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel className="truncate">{userEmail}</DropdownMenuLabel>
+          <DropdownMenuTrigger
+            render={
+              <button className="flex items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 transition-colors hover:border-[var(--border)] hover:bg-[var(--card)]">
+                <Avatar size="sm">
+                  <AvatarFallback className="bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-medium">
+                    {getInitials(userEmail)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="hidden text-sm text-[var(--foreground)] sm:inline">
+                  {userEmail.split("@")[0]}
+                </span>
+              </button>
+            }
+          />
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="truncate text-xs text-[var(--muted-foreground)]">
+              {userEmail}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem render={<Link href="/settings" className="cursor-pointer flex w-full items-center gap-2" />}>
-              <Settings2 data-icon="inline-start" />
+            <DropdownMenuItem
+              render={
+                <Link
+                  href="/settings"
+                  className="flex w-full cursor-pointer items-center gap-2"
+                />
+              }
+            >
+              <Settings2 className="size-3.5" data-icon="inline-start" />
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive">
-              <LogOut data-icon="inline-start" />
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              className="cursor-pointer text-destructive focus:text-destructive"
+            >
+              <LogOut className="size-3.5" data-icon="inline-start" />
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
