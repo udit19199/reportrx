@@ -69,11 +69,6 @@ export function RangeBar({
         >
           {value}
         </span>
-        {unit ? (
-          <span className="mr-1 shrink-0 text-xs text-[var(--muted-foreground)]">
-            {unit}
-          </span>
-        ) : null}
 
         {/* Range bar */}
         <div className="relative h-2 min-w-[88px] flex-1 rounded-full bg-[var(--muted)]">
@@ -106,9 +101,9 @@ export function RangeBar({
           />
         </div>
 
-        {/* Reference range — subtly shown on wider screens */}
-        <span className="hidden shrink-0 text-[11px] tabular-nums text-[var(--muted-foreground)] sm:inline">
-          {range.min} – {range.max}
+        {/* Reference range + unit */}
+        <span className="shrink-0 text-[11px] tabular-nums text-[var(--muted-foreground)]">
+          {range.min} – {range.max}{unit ? <span className="ml-1">{unit}</span> : null}
         </span>
       </div>
     );
