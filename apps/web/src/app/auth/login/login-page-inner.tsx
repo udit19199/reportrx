@@ -49,10 +49,13 @@ export function LoginPageInner() {
   return (
     <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
       <FieldGroup>
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Welcome back</h1>
-          <p className="text-sm text-balance text-muted-foreground">
-            Enter your email below to login to your account
+        {/* Header */}
+        <div className="mb-2 text-center">
+          <h1 className="font-display text-3xl font-medium text-[var(--foreground)]">
+            Welcome back
+          </h1>
+          <p className="mt-1.5 text-sm text-[var(--muted-foreground)]">
+            Sign in to your ReportRx account
           </p>
         </div>
 
@@ -100,7 +103,7 @@ export function LoginPageInner() {
             />
             <button
               type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
               onClick={() => setShowPassword(!showPassword)}
               tabIndex={-1}
             >
@@ -119,7 +122,10 @@ export function LoginPageInner() {
           </Button>
           <FieldDescription className="text-center">
             Don&apos;t have an account?{" "}
-            <Link href="/auth/signup" className="underline underline-offset-4 hover:text-primary">
+            <Link
+              href="/auth/signup"
+              className="font-medium text-[var(--primary)] underline underline-offset-4 transition-colors hover:text-[var(--primary)]/80"
+            >
               Sign up
             </Link>
           </FieldDescription>

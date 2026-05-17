@@ -1,24 +1,16 @@
-import { cookies } from "next/headers";
-import { API_URL } from "./config";
+import { getServerSession } from "./server-api";
 
 export type SessionUser = {
   id: string;
   email: string;
 };
 
+/**
+ * Get the current user session from the server.
+ * Uses the httpOnly token cookie.
+ */
 export async function getSession(): Promise<{ user: SessionUser } | null> {
-  try {
-    const cookieStore = await cookies();
-    const cookieHeader = cookieStore.toString();
-
-    const response = await fetch(`${API_URL}/api/auth/me`, {
-      headers: cookieHeader ? { Cookie: cookieHeader } : {},
-      cache: "no-store",
-    });
-
-    if (!response.ok) return null;
-    return response.json();
-  } catch {
-    return null;
-  }
+  const user = await getServerSession();
+  if (!user) return null;
+  return { user };
 }

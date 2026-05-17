@@ -1,27 +1,33 @@
-import type { Metadata } from "next";
-import { Cormorant_Garamond, DM_Sans } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Fraunces, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
 
-const THEME_COLOR = "#fcfbf6";
+const THEME_COLOR = "#f7f3ed";
 
-const displayFont = Cormorant_Garamond({
-  weight: ["300", "400", "500", "600", "700"],
-  style: ["normal", "italic"],
-  variable: "--font-display",
+const displayFont = Fraunces({
   subsets: ["latin"],
+  variable: "--font-display",
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
 const bodyFont = DM_Sans({
-  variable: "--font-body",
   subsets: ["latin"],
+  variable: "--font-body",
   weight: ["400", "500", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "ReportRx | Understand Your Medical Reports",
-  description: "Turn dense medical documents into plain language summaries without the anxiety.",
+  description:
+    "Turn dense medical documents into plain language summaries without the anxiety.",
+};
+
+export const viewport: Viewport = {
+  themeColor: THEME_COLOR,
 };
 
 export default function RootLayout({
@@ -32,19 +38,26 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", displayFont.variable, bodyFont.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        displayFont.variable,
+        bodyFont.variable
+      )}
     >
-      <head>
-        <meta name="theme-color" content={THEME_COLOR} />
-      </head>
-      <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)] selection:bg-[var(--accent)] selection:text-white relative">
+
+      <body className="relative flex min-h-full flex-col bg-[var(--background)] text-[var(--foreground)]">
+        {/* Paper grain overlay */}
+        <div className="paper-grain" aria-hidden="true" />
+
+        {/* Skip to main content */}
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus-visible:absolute focus-visible:left-4 focus-visible:top-4 focus-visible:z-[60] focus-visible:rounded-md focus-visible:bg-background focus-visible:px-4 focus-visible:py-2 focus-visible:text-sm focus-visible:font-medium focus-visible:text-foreground focus-visible:shadow"
+          className="sr-only focus:not-sr-only focus-visible:absolute focus-visible:left-4 focus-visible:top-4 focus-visible:z-[60] focus-visible:rounded-xl focus-visible:bg-[var(--card)] focus-visible:px-4 focus-visible:py-2.5 focus-visible:text-sm focus-visible:font-medium focus-visible:text-[var(--foreground)] focus-visible:shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
         >
           Skip to main content
         </a>
-        <div className="noise-overlay pointer-events-none fixed inset-0 z-50 opacity-[0.03]"></div>
+
         {children}
         <Toaster richColors closeButton position="bottom-right" />
       </body>

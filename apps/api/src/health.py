@@ -46,7 +46,8 @@ async def check_service_health(ai_clients, settings: Settings) -> dict:
 
     try:
         if settings.embed_provider.lower() == "openai":
-            client = AsyncOpenAI(api_key=settings.openai_api_key, base_url=settings.openai_api_base)
+            embed_base = settings.embed_api_base or settings.openai_api_base
+            client = AsyncOpenAI(api_key=settings.openai_api_key, base_url=embed_base)
             await client.embeddings.create(
                 model=settings.embed_model,
                 input=["test"],

@@ -1,14 +1,22 @@
+import type { Metadata } from "next";
 import { WorkspaceErrorBoundary } from "@/components/error-boundary";
-import { AppHeader } from "@/components/app-header";
 import { Workspace } from "@/features/workspace/workspace";
+import { getServerReports, getServerTrends } from "@/lib/server-api";
+
+export const metadata: Metadata = {
+  title: "Workspace | ReportRx",
+  description: "View and analyze your medical report summaries.",
+};
 
 export default async function AppPage() {
+  const [reports, trendsData] = await Promise.all([
+    getServerReports(),
+    getServerTrends(),
+  ]);
+
   return (
-    <div className="min-h-screen">
-      <AppHeader />
-      <WorkspaceErrorBoundary>
-        <Workspace initialReports={[]} />
-      </WorkspaceErrorBoundary>
-    </div>
+    <WorkspaceErrorBoundary>
+      <Workspace initialReports={reports} initialTrends={trendsData.tests} />
+    </WorkspaceErrorBoundary>
   );
 }

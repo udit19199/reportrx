@@ -43,7 +43,8 @@ API Python deps: `apps/api/.venv` — create with `python -m venv .venv && .venv
 - **AI clients**: `src/ai_clients.py` — pluggable providers (OpenAI-compatible, Ollama, LM Studio). Created in lifespan, stored on `app.state.ai_clients`.
   - LLM: `AI_PROVIDER` (openai/ollama), model via `AI_MODEL`
   - Embeddings: `EMBED_PROVIDER` (openai/ollama), model via `EMBED_MODEL`
-  - LM Studio: set `LM_STUDIO_CHAT_ENDPOINT` for custom chat path; embeddings use `OPENAI_API_BASE`
+  - LLM (OpenAI): uses `OPENAI_API_KEY` + `OPENAI_API_BASE` (defaults to `https://api.openai.com/v1`)
+  - Embeddings (LM Studio): uses same `OPENAI_API_KEY` but `EMBED_API_BASE` for a separate endpoint
 - **Document parsing**: LiteParse via `lit` CLI (`npm i -g @llamaindex/liteparse`). Chunks at 1200 chars with 200 char overlap.
 - **Ingestion**: `src/ingestion.py` — synchronous per-report pipeline: parse → embed batches (10/batch) → upsert vectors → generate summary → mark ready. Retries (3x) on each step.
 - **Watchdog**: `src/workers/watchdog.py` — background task fails reports stuck in `processing` > 10 min.
@@ -56,13 +57,13 @@ API Python deps: `apps/api/.venv` — create with `python -m venv .venv && .venv
 - Web uses `.env.local` (gitignored); API uses `.env` (gitignored).
 - See `.env.example` in each app for required vars.
 
-## AI model setup (LM Studio)
+## AI model setup (OpenAI LLM + LM Studio embeddings)
 
-Current `.env` config for local LM Studio:
-- `AI_MODEL=qwen/qwen3.5-9b` — chat model
-- `EMBED_MODEL=text-embedding-embeddinggemma-300m` — embedding model
-- `OPENAI_API_BASE=http://127.0.0.1:1234/v1`
-- `LM_STUDIO_CHAT_ENDPOINT=http://127.0.0.1:1234/api/v1/chat`
-- `OPENAI_API_KEY=lm-studio` (any non-empty value works)
+Current `.env` config:
+- `AI_MODEL=gpt-4o-mini` — chat model via OpenAI
+- `EMBED_MODEL=text-embedding-embeddinggemma-300m` — embedding model via LM Studio (768d)
+- `OPENAI_API_BASE=https://api.openai.com/v1` — LLM endpoint
+- `EMBED_API_BASE=http://127.0.0.1:1234/v1` — embedding endpoint (LM Studio)
+- `OPENAI_API_KEY` — your OpenAI API key
 
-Both providers set to `openai` which routes through the OpenAI-compatible client. LM Studio chat uses the custom endpoint (`/api/v1/chat` with `system_prompt`/`input` params), embeddings use standard `/v1/embeddings`.
+Both providers set to `openai` but use different base URLs: the LLM routes to real OpenAI, embeddings route to LM Studio's OpenAI-compatible endpoint.

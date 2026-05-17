@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { TrendDataPoint } from "@/lib/api";
@@ -43,13 +44,19 @@ function parseRange(range: string | null): { min: number; max: number } | null {
   return { min: parseFloat(match[1]), max: parseFloat(match[2]) };
 }
 
-export function TrendModal({ open, onOpenChange, testName, history, currentReport }: TrendModalProps) {
+export function TrendModal({
+  open,
+  onOpenChange,
+  testName,
+  history,
+  currentReport,
+}: TrendModalProps) {
   const range = history.length > 0 ? parseRange(history[0].referenceRange) : null;
 
   const chartData = history.map((h) => {
     const numValue = parseFloat(h.value?.replace(/[^0-9.-]/g, "") ?? "");
     return {
-      date: new Date(h.uploadedAt).toLocaleDateString(),
+      date: new Date(h.uploadedAt).toLocaleDateString("en-US"),
       value: isNaN(numValue) ? null : numValue,
       reportId: h.reportId,
       filename: h.filename,
@@ -67,68 +74,105 @@ export function TrendModal({ open, onOpenChange, testName, history, currentRepor
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{testName} — Trend</DialogTitle>
+          <DialogTitle className="font-display text-lg">
+            {testName} — Trend
+          </DialogTitle>
           <DialogDescription>
-            {history.length} measurement{history.length !== 1 ? "s" : ""} across {history.length} report{history.length !== 1 ? "s" : ""}
+            {history.length} measurement
+            {history.length !== 1 ? "s" : ""} across {history.length} report
+            {history.length !== 1 ? "s" : ""}
           </DialogDescription>
         </DialogHeader>
 
+        {/* Current report context */}
         {currentReport && (
-          <div className="flex flex-wrap gap-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+          <div className="flex flex-wrap gap-3 rounded-xl border border-[var(--border)]/60 bg-[var(--muted)]/30 p-3">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Current value</p>
-              <p className="text-sm font-semibold mt-0.5">
+              <p className="text-xs font-medium text-[var(--muted-foreground)]">
+                Current value
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-[var(--foreground)]">
                 {currentReport.value} {currentReport.unit}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Reference range</p>
-              <p className="text-sm font-medium mt-0.5">{currentReport.referenceRange ?? "—"}</p>
+              <p className="text-xs font-medium text-[var(--muted-foreground)]">
+                Reference range
+              </p>
+              <p className="mt-0.5 text-sm font-medium text-[var(--foreground)]">
+                {currentReport.referenceRange ?? "—"}
+              </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Status</p>
+              <p className="text-xs font-medium text-[var(--muted-foreground)]">
+                Status
+              </p>
               <div className="mt-1">
                 <Badge
                   variant={
                     currentReport.status === "critical"
                       ? "destructive"
-                      : currentReport.status === "high" || currentReport.status === "low"
+                      : currentReport.status === "high" ||
+                          currentReport.status === "low"
                         ? "default"
                         : "outline"
                   }
-                  className={currentReport.status === "normal" ? "text-emerald-600" : ""}
+                  className={
+                    currentReport.status === "normal"
+                      ? "text-emerald-600"
+                      : ""
+                  }
                 >
                   {currentReport.status}
                 </Badge>
               </div>
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">From report</p>
-              <p className="text-sm font-medium mt-0.5 truncate max-w-[200px]">{currentReport.filename}</p>
+              <p className="text-xs font-medium text-[var(--muted-foreground)]">
+                From report
+              </p>
+              <p className="mt-0.5 max-w-[200px] truncate text-sm font-medium text-[var(--foreground)]">
+                {currentReport.filename}
+              </p>
             </div>
           </div>
         )}
 
-        <Separator />
+        <Separator className="bg-[var(--border)]/40" />
 
+        {/* Chart */}
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
-              <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-              <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="oklch(0.86 0.01 60 / 0.4)"
+              />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 12 }}
+                stroke="oklch(0.50 0.02 65)"
+              />
+              <YAxis
+                tick={{ fontSize: 12 }}
+                stroke="oklch(0.50 0.02 65)"
+              />
               <Tooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.[0]) return null;
                   const point = payload[0].payload;
                   return (
-                    <div className="rounded-lg border bg-background p-2 shadow-sm text-xs">
-                      <p className="font-medium">{point.date}</p>
-                      <p className="text-muted-foreground mt-0.5">
+                    <Card className="px-3 py-2 text-xs shadow-sm">
+                      <p className="font-medium text-[var(--foreground)]">
+                        {point.date}
+                      </p>
+                      <p className="mt-0.5 text-[var(--muted-foreground)]">
                         Value: {point.value} {history[0]?.unit}
                       </p>
-                      <p className="text-muted-foreground">Status: {point.status}</p>
-                    </div>
+                      <p className="text-[var(--muted-foreground)]">
+                        Status: {point.status}
+                      </p>
+                    </Card>
                   );
                 }}
               />
@@ -136,15 +180,20 @@ export function TrendModal({ open, onOpenChange, testName, history, currentRepor
                 <ReferenceArea
                   y1={range.min}
                   y2={range.max}
-                  fill="hsl(var(--primary) / 0.08)"
+                  fill="oklch(0.33 0.055 155 / 0.08)"
                   stroke="none"
-                  label={{ value: "Normal range", position: "insideTopRight", fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  label={{
+                    value: "Normal range",
+                    position: "insideTopRight",
+                    fontSize: 11,
+                    fill: "oklch(0.50 0.02 65)",
+                  }}
                 />
               )}
               <Line
                 type="monotone"
                 dataKey="value"
-                stroke="hsl(var(--primary))"
+                stroke="oklch(0.33 0.055 155)"
                 strokeWidth={2}
                 dot={({ cx, cy, payload }) => (
                   <circle
@@ -152,7 +201,7 @@ export function TrendModal({ open, onOpenChange, testName, history, currentRepor
                     cy={cy}
                     r={4}
                     fill={statusColor(payload.status)}
-                    stroke="hsl(var(--background))"
+                    stroke="oklch(0.99 0.004 70)"
                     strokeWidth={2}
                   />
                 )}
@@ -161,11 +210,19 @@ export function TrendModal({ open, onOpenChange, testName, history, currentRepor
           </ResponsiveContainer>
         </div>
 
+        {/* History list */}
         <div className="space-y-1">
           {history.map((h, i) => (
-            <div key={i} className="flex items-center justify-between text-sm rounded-md px-2 py-1.5 hover:bg-muted/50">
-              <span className="text-muted-foreground">{new Date(h.uploadedAt).toLocaleDateString()}</span>
-              <span className="font-medium">{h.value} {h.unit}</span>
+            <div
+              key={i}
+              className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-[var(--muted)]/50"
+            >
+              <span className="text-[var(--muted-foreground)]">
+                {new Date(h.uploadedAt).toLocaleDateString("en-US")}
+              </span>
+              <span className="font-medium text-[var(--foreground)]">
+                {h.value} {h.unit}
+              </span>
               <Badge
                 variant={
                   h.status === "critical"

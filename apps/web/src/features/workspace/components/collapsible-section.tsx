@@ -31,17 +31,17 @@ export function CollapsibleSection({
           onClick={() => setExpanded(!expanded)}
           className="flex w-full items-center gap-2.5 text-left"
         >
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-            <Icon className="size-4 text-primary" />
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--primary)]/10">
+            <Icon className="size-4 text-[var(--primary)]" />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <CardTitle className="text-base">{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
           {expanded ? (
-            <ChevronUp className="size-4 text-muted-foreground shrink-0" />
+            <ChevronUp className="size-4 shrink-0 text-[var(--muted-foreground)]" />
           ) : (
-            <ChevronDown className="size-4 text-muted-foreground shrink-0" />
+            <ChevronDown className="size-4 shrink-0 text-[var(--muted-foreground)]" />
           )}
         </button>
       </CardHeader>

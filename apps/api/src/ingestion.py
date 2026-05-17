@@ -102,11 +102,13 @@ REPORT_JSON_SCHEMA = {
     "name": "medical_report",
     "schema": {
         "type": "object",
+        "additionalProperties": False,
         "properties": {
             "document_type": {"type": "string"},
             "report_date": {"type": "string"},
             "patient_information": {
                 "type": "object",
+                "additionalProperties": False,
                 "properties": {
                     "name": {"type": "string"},
                     "age": {"type": "string"},
@@ -119,6 +121,7 @@ REPORT_JSON_SCHEMA = {
                 "type": "array",
                 "items": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {
                         "test_name": {"type": "string"},
                         "value": {"type": "string"},
@@ -146,6 +149,7 @@ REPORT_JSON_SCHEMA = {
                 "type": "array",
                 "items": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {
                         "finding": {"type": "string"},
                         "severity": {
@@ -214,81 +218,42 @@ async def with_retry(fn, retries: int = 3, delay_ms: int = 2000, label: str = ""
     raise last_error
 
 
-async def _retrieve_chunks_for_extraction(
-    ai_clients: AiClients,
-    user_id: str,
-    report_id: str,
-    top_k: int = 20,
-) -> str:
-    """Retrieve the most relevant chunks for structured data extraction from Milvus.
-
-    Instead of sending ALL parsed chunks to the LLM (which can create a 15k+ token
-    prompt), this function uses a broad query to retrieve only the top-k most relevant
-    chunks — headers, patient info, and test result tables — while filtering out
-    disclaimers, notes, and administrative text.
-    """
-    # Broad query covering everything extraction needs to find
-    query = (
-        "patient demographics name age gender patient id "
-        "medical laboratory test results values units reference ranges "
-        "report date document type"
-    )
-    try:
-        query_vector = (await ai_clients.embed.embed([query]))[0]
-        contexts, sources = await search_vectors(
-            "", query_vector, user_id, report_id, top_k=top_k
-        )
-    except Exception as e:
-        logger.warning(f"Extraction retrieval failed, falling back to all chunks: {e}")
-        return ""
-
-    if not contexts:
-        logger.info("No chunks retrieved from Milvus, falling back to all chunks")
-        return ""
-
-    logger.info(f"Retrieved {len(contexts)}/{top_k} relevant chunks for extraction")
-
-    # Build context block from retrieved chunks
-    context_parts = []
-    for ctx, src in zip(contexts, sources):
-        context_parts.append(f"[{src}] {ctx}")
-
-    return "\n\n".join(context_parts)
-
 
 async def _retrieve_context_for_interpretation(
     ai_clients: AiClients,
     user_id: str,
     report_id: str,
     extraction: dict,
-    top_k: int = 5,
+    top_k: int = 10,
 ) -> str:
-    """Retrieve relevant context for interpretation using extracted test names as queries."""
+    """Retrieve relevant context for interpretation using all test names as a batch query.
+
+    Instead of one embed + search per test name (N+1 problem), this combines
+    all test names into a single query for one round-trip.
+    """
     tests = extraction.get("tests", [])
     if not tests:
         return ""
 
-    test_queries = [t["test_name"] for t in tests[:10]]
-    all_contexts = []
-    all_sources = []
+    test_names = [t["test_name"] for t in tests[:15]]
+    combined_query = " ".join(test_names)
 
-    for query in test_queries:
-        try:
-            query_vector = (await ai_clients.embed.embed([query]))[0]
-            contexts, sources = await search_vectors(
-                "", query_vector, user_id, report_id, top_k=2
-            )
-            all_contexts.extend(contexts)
-            all_sources.extend(sources)
-        except Exception as e:
-            logger.warning(f"Retrieval for '{query}' failed: {e}")
-
-    if not all_contexts:
+    try:
+        query_vector = (await ai_clients.embed.embed([combined_query]))[0]
+        contexts, sources = await search_vectors(
+            "", query_vector, user_id, report_id, top_k=top_k
+        )
+    except Exception as e:
+        logger.warning(f"Batch retrieval failed: {e}")
         return ""
 
+    if not contexts:
+        return ""
+
+    logger.info(f"Retrieved {len(contexts)} relevant chunks for interpretation (batch query)")
     seen = set()
     unique_contexts = []
-    for ctx, src in zip(all_contexts, all_sources):
+    for ctx, src in zip(contexts, sources):
         key = f"{src}:{ctx[:100]}"
         if key not in seen:
             seen.add(key)
@@ -341,7 +306,7 @@ async def process_ingestion_job(
         chunks = await with_retry(
             lambda: parse_pdf(file_path),
             retries=3,
-            delay_ms=2000,
+            delay_ms=500,
             label="LiteParse",
         )
         logger.info(f"Parsed {len(chunks)} chunks for report {report_id}")
@@ -362,7 +327,7 @@ async def process_ingestion_job(
             embeddings = await with_retry(
                 lambda b=batch: ai_clients.embed.embed([c["text"] for c in b]),
                 retries=3,
-                delay_ms=2000,
+                delay_ms=500,
                 label="Embedding generation",
             )
 
@@ -383,41 +348,21 @@ async def process_ingestion_job(
             await with_retry(
                 lambda i=items: upsert_vectors("", user_id, i),
                 retries=3,
-                delay_ms=2000,
+                delay_ms=500,
                 label="Vector store upsert",
             )
 
         logger.info(f"Upserted {total_upserted} vectors to Milvus for report {report_id}")
 
         await _set_stage("extracting")
-        logger.info(f"Stage 1: Extracting structured data...")
+        logger.info(f"Stage 1: Extracting structured data using all parsed chunks...")
 
-        # Retrieve only the most relevant chunks from Milvus instead of sending ALL chunks
-        # This dramatically reduces prompt size (from 15k+ tokens to ~3-5k)
-        extraction_context = await _retrieve_chunks_for_extraction(
-            ai_clients, user_id, report_id, top_k=20
+        extraction = await with_retry(
+            lambda: extract_structured_data(ai_clients, chunks),
+            retries=3,
+            delay_ms=500,
+            label="Extraction",
         )
-
-        if extraction_context:
-            extraction = await with_retry(
-                lambda: extract_structured_data(
-                    ai_clients,
-                    chunks=None,
-                    context_block=extraction_context,
-                ),
-                retries=3,
-                delay_ms=2000,
-                label="Extraction",
-            )
-        else:
-            # Fallback: use all chunks (no retrieval available)
-            logger.warning(f"Using all {len(chunks)} chunks for extraction (no Milvus retrieval)")
-            extraction = await with_retry(
-                lambda: extract_structured_data(ai_clients, chunks),
-                retries=3,
-                delay_ms=2000,
-                label="Extraction",
-            )
 
         num_tests = len(extraction.get("tests", []))
         logger.info(f"Extracted {num_tests} tests from report {report_id}")

@@ -6,11 +6,13 @@ EXTRACTION_SCHEMA = {
     "name": "medical_report_extraction",
     "schema": {
         "type": "object",
+        "additionalProperties": False,
         "properties": {
             "document_type": {"type": "string"},
             "report_date": {"type": "string"},
             "patient_information": {
                 "type": "object",
+                "additionalProperties": False,
                 "properties": {
                     "name": {"type": "string"},
                     "age": {"type": "string"},
@@ -23,6 +25,7 @@ EXTRACTION_SCHEMA = {
                 "type": "array",
                 "items": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {
                         "test_name": {"type": "string"},
                         "value": {"type": "string"},

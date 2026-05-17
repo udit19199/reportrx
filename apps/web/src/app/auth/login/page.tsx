@@ -1,29 +1,51 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import { LoginPageInner } from "./login-page-inner";
 import { AuthIllustration } from "@/components/auth-illustration";
+
+export const metadata: Metadata = {
+  title: "Sign In | ReportRx",
+  description: "Sign in to your ReportRx account to access your medical report summaries.",
+};
 
 export default function LoginPage() {
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
-      <div className="flex flex-col gap-4 p-6 md:p-10">
-        <div className="flex justify-center gap-2 md:justify-start">
-          <a href="/" className="flex items-center gap-2 font-medium">
-            <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <span className="font-display text-lg">ReportRx</span>
-          </a>
-        </div>
+      {/* Form side */}
+      <div className="relative flex flex-col p-6 md:p-10">
+        {/* Ambient glow */}
+        <div
+          className="pointer-events-none absolute -left-40 -top-40 h-96 w-96 rounded-full opacity-[0.08]"
+          style={{
+            background:
+              "radial-gradient(circle, oklch(0.33 0.055 155), transparent 70%)",
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Logo */}
+        <Link
+          href="/"
+          className="flex items-center gap-2 font-medium"
+        >
+          <span className="font-display text-lg text-[var(--foreground)]">
+            ReportRx
+          </span>
+          <span className="text-[var(--primary)] opacity-40">✦</span>
+        </Link>
+
+        {/* Form */}
         <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-xs">
+          <div className="w-full max-w-sm">
             <Suspense>
               <LoginPageInner />
             </Suspense>
           </div>
         </div>
       </div>
+
+      {/* Illustration side */}
       <AuthIllustration />
     </div>
   );

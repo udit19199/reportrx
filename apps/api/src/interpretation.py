@@ -11,11 +11,13 @@ INTERPRETATION_SCHEMA = {
     "name": "medical_report_interpretation",
     "schema": {
         "type": "object",
+        "additionalProperties": False,
         "properties": {
             "abnormal_findings": {
                 "type": "array",
                 "items": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {
                         "finding": {"type": "string"},
                         "severity": {
@@ -96,15 +98,16 @@ Provide clinical interpretation including abnormal findings, summary, alerts, an
         result = await ai_clients.llm.generate_json(
             prompt=prompt,
             system=INTERPRETATION_SYSTEM_PROMPT,
-            max_tokens=2000,
+            max_tokens=4000,
             schema=INTERPRETATION_SCHEMA,
         )
         return result
     except Exception as e:
-        logger.error(f"Failed to generate interpretation: {e}")
+        error_msg = str(e)
+        logger.error(f"Failed to generate interpretation: {error_msg}")
         return {
             "abnormal_findings": [],
-            "summary": "Interpretation could not be generated.",
+            "summary": f"Interpretation could not be generated. ({error_msg})",
             "alerts": [],
-            "interpretation": f"Error during interpretation: {str(e)}",
+            "interpretation": f"Error during interpretation: {error_msg}",
         }

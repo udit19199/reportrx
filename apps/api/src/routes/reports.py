@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 import asyncio
 from pathlib import Path
@@ -23,6 +24,44 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 REPORT_SELECT_FIELDS = ["id", "filename", "status", "uploaded_at", "parsed_data", "error_message"]
 
 
+def _compute_status(value: str, reference_range: str, flagged: bool) -> str:
+    """Determine the actual status by comparing value against the reference range.
+
+    Returns "normal", "high", "low", or "critical". Falls back to "high" if
+    parsing fails but the test is flagged.
+    """
+    if not flagged:
+        return "normal"
+
+    if not value or not reference_range:
+        return "high"
+
+    try:
+        # Strip units and non-numeric prefixes like "<" or ">"
+        cleaned = re.sub(r"[^0-9.\-]", "", value.replace(",", ""))
+        num_value = float(cleaned)
+    except (ValueError, AttributeError):
+        return "high"
+
+    range_match = re.match(r"([0-9.]+)\s*[-–—]+\s*([0-9.]+)", reference_range.strip())
+    if not range_match:
+        return "high"
+
+    try:
+        range_min = float(range_match.group(1))
+        range_max = float(range_match.group(2))
+    except (ValueError, AttributeError):
+        return "high"
+
+    if num_value < range_min:
+        return "low"
+    elif num_value > range_max:
+        return "high"
+    else:
+        # Flagged but actually within range — unusual, flag as high anyway
+        return "high"
+
+
 def normalize_parsed_data(raw: dict | None) -> dict | None:
     """Normalize parsed_data for backward compatibility.
 
@@ -43,10 +82,11 @@ def normalize_parsed_data(raw: dict | None) -> dict | None:
         for t in tests:
             enriched = dict(t)
             if "status" not in enriched:
-                if enriched.get("flagged"):
-                    enriched["status"] = "high"
-                else:
-                    enriched["status"] = "normal"
+                enriched["status"] = _compute_status(
+                    enriched.get("value", ""),
+                    enriched.get("reference_range", ""),
+                    enriched.get("flagged", False),
+                )
             if "confidence" not in enriched:
                 enriched["confidence"] = 0.9
             enriched_tests.append(enriched)

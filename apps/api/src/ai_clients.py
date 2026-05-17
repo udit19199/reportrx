@@ -419,6 +419,7 @@ def create_ai_clients() -> AiClients:
     if embed_provider == "ollama":
         embed = OllamaProvider(settings.embed_base_url, is_embed=True)
     else:
-        embed = OpenAiProvider(settings.openai_api_key, base_url=settings.openai_api_base)
+        embed_base = settings.embed_api_base or settings.openai_api_base
+        embed = OpenAiProvider(settings.openai_api_key, base_url=embed_base)
 
     return AiClients(llm=llm, embed=embed)

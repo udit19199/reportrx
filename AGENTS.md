@@ -49,14 +49,13 @@ SQLite via SQLAlchemy 2.0. DB file at `apps/api/prisma/dev.db`. The `prisma/` di
 - **No Prisma, no PostgreSQL** — SQLAlchemy + SQLite
 - **No migrations** — schema created on startup
 - Web has **no Next.js API routes** — all data goes through external FastAPI at `NEXT_PUBLIC_API_URL`
-- LM Studio uses non-standard `/api/v1/chat` endpoint with `system_prompt`/`input` params — set `LM_STUDIO_CHAT_ENDPOINT`
 - API env uses `AI_PROVIDER`/`EMBED_PROVIDER` (openai/ollama), not a single provider flag
 
-## AI model setup (LM Studio)
+## AI model setup (OpenAI LLM + LM Studio embeddings)
 
 Current `.env` config:
-- `AI_MODEL=qwen/qwen3.5-9b`
-- `EMBED_MODEL=text-embedding-embeddinggemma-300m`
-- `OPENAI_API_BASE=http://127.0.0.1:1234/v1`
-- `LM_STUDIO_CHAT_ENDPOINT=http://127.0.0.1:1234/api/v1/chat`
-- `OPENAI_API_KEY=lm-studio` (any non-empty value works)
+- `AI_MODEL=gpt-4o-mini` — chat model via OpenAI
+- `EMBED_MODEL=text-embedding-embeddinggemma-300m` — embedding model via LM Studio (768d)
+- `OPENAI_API_BASE=https://api.openai.com/v1` — LLM endpoint
+- `EMBED_API_BASE=http://127.0.0.1:1234/v1` — embedding endpoint (LM Studio)
+- `OPENAI_API_KEY` — your OpenAI API key

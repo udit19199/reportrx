@@ -1,21 +1,43 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, ShieldCheck, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  ShieldCheck, 
+  Loader2, 
+  User, 
+  AlertTriangle,
+  Trash2,
+  FileText,
+  LogOut
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { readConsentPreference, writeConsentPreference } from "@/lib/consent";
+import { api } from "@/lib/api";
 
-export function SettingsClient() {
-  const [consent, setConsent] = useState<boolean | null>(() => readConsentPreference());
+export function SettingsClient({ userEmail }: { userEmail: string }) {
+  const router = useRouter();
+  const [consent, setConsent] = useState<boolean | null>(() =>
+    readConsentPreference()
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleSave = async () => {
     if (consent === null) return;
@@ -27,77 +49,181 @@ export function SettingsClient() {
     setSaving(false);
   };
 
+  const handleSignOut = async () => {
+    await api.logout();
+    router.push("/");
+  };
+
+  const handleDeleteAccount = () => {
+    // UI placeholder - backend not implemented
+    setShowDeleteDialog(false);
+    alert("Account deletion is not yet implemented.");
+  };
+
   return (
-    <main id="main-content" className="min-h-screen bg-background px-4 py-6 md:px-6 lg:px-8 lg:py-8">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <Link
-          href="/app"
-          className="inline-flex w-fit items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
-        >
-          <ArrowLeft className="size-4" data-icon="inline-start" />
-          Back to workspace
-        </Link>
+    <main
+      id="main-content"
+      className="min-h-screen px-4 py-6 md:px-6 lg:px-8 lg:py-10"
+    >
+      <div className="mx-auto w-full max-w-2xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="font-display text-3xl font-medium text-[var(--foreground)]">
+            Settings
+          </h1>
+          <p className="mt-1 text-[var(--muted-foreground)]">
+            Manage your account and preferences
+          </p>
+        </div>
 
-        <Card className="border-border/60 bg-card/90 shadow-sm backdrop-blur">
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <CardTitle className="text-2xl font-display">Settings</CardTitle>
-                <CardDescription>Manage your privacy and consent preferences.</CardDescription>
+        <div className="flex flex-col gap-6">
+          {/* Account Summary */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
+                <User className="size-4 text-[var(--muted-foreground)]" />
+                Account
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-[var(--muted-foreground)]">Email</p>
+                  <p className="font-medium">{userEmail}</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                  <LogOut className="mr-2 size-3.5" />
+                  Sign out
+                </Button>
               </div>
-              <Badge variant="secondary" className="gap-1.5 px-3 py-1">
-                <ShieldCheck className="size-3.5" />
-                Privacy
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-6">
-            <Alert>
-              <ShieldCheck className="size-4" />
-              <AlertDescription>
-                Your consent preference controls whether uploaded reports are processed by third-party AI providers. This setting is stored locally in your browser.
-              </AlertDescription>
-            </Alert>
+            </CardContent>
+          </Card>
 
-            <div className="flex items-center justify-between rounded-2xl border border-border bg-muted/30 p-4">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="consent-toggle" className="text-sm font-medium text-foreground">
-                  AI Processing Consent
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Allow reports to be processed by third-party AI providers.
-                </p>
-              </div>
-              <Switch
-                id="consent-toggle"
-                checked={consent ?? false}
-                onCheckedChange={(checked) => setConsent(checked)}
-              />
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">
-                Status:{" "}
-                <span className={consent ? "text-emerald-600 font-medium" : "text-muted-foreground"}>
-                  {consent === null ? "Not set" : consent ? "Enabled" : "Disabled"}
-                </span>
-              </p>
-              <Button onClick={handleSave} disabled={consent === null || saving}>
-                {saving && <Loader2 className="size-4 animate-spin" data-icon="inline-start" />}
-                {saving ? "Saving..." : "Save changes"}
-              </Button>
-            </div>
-
-            {saved && (
-              <Alert>
-                <AlertDescription className="text-emerald-600">
-                  Preference saved successfully.
+          {/* Privacy & Consent */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
+                <ShieldCheck className="size-4 text-[var(--muted-foreground)]" />
+                Privacy & Consent
+              </CardTitle>
+              <CardDescription>
+                Control how your data is processed
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert className="bg-[var(--muted)]/30">
+                <AlertDescription className="text-xs">
+                  Your consent preference controls whether uploaded reports are
+                  processed by third-party AI providers. This setting is stored
+                  locally in your browser.
                 </AlertDescription>
               </Alert>
-            )}
-          </CardContent>
-        </Card>
+
+              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--muted)]/20 p-4">
+                <div>
+                  <Label
+                    htmlFor="consent-toggle"
+                    className="text-sm font-medium"
+                  >
+                    AI Processing Consent
+                  </Label>
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    Allow AI analysis of your reports
+                  </p>
+                </div>
+                <Switch
+                  id="consent-toggle"
+                  checked={consent ?? false}
+                  onCheckedChange={(checked) => setConsent(checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[var(--muted-foreground)]">
+                  Status:{" "}
+                  <span className={consent ? "text-emerald-600" : ""}>
+                    {consent ? "Enabled" : "Disabled"}
+                  </span>
+                </span>
+                <Button
+                  onClick={handleSave}
+                  disabled={saving}
+                  size="sm"
+                >
+                  {saving && (
+                    <Loader2 className="mr-2 size-3.5 animate-spin" />
+                  )}
+                  {saving ? "Saving..." : "Save"}
+                </Button>
+              </div>
+
+              {saved && (
+                <p className="text-center text-sm text-emerald-600">
+                  Changes saved successfully
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Delete Account */}
+          <Card className="border-red-200/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base font-medium text-red-600">
+                <AlertTriangle className="size-4" />
+                Danger Zone
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Delete account</p>
+                  <p className="text-sm text-[var(--muted-foreground)]">
+                    Permanently remove all your data
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="mr-2 size-3.5" />
+                  Delete
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* App Info */}
+          <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
+            <div className="flex items-center gap-2">
+              <FileText className="size-3.5" />
+              <span>ReportRx</span>
+            </div>
+            <span>Version 1.0.0</span>
+          </div>
+        </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. All your reports and data will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }

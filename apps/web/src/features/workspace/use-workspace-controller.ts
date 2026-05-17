@@ -28,9 +28,10 @@ export type WorkspaceController = {
 
 type Options = {
   initialReports: ApiReport[];
+  initialTrends?: Record<string, TrendDataPoint[]>;
 };
 
-export const useWorkspaceController = ({ initialReports }: Options): WorkspaceController => {
+export const useWorkspaceController = ({ initialReports, initialTrends = {} }: Options): WorkspaceController => {
   const [reports, setReports] = useState<ApiReport[]>(initialReports);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(initialReports[0]?.id ?? null);
   const [query, setQuery] = useState("");
@@ -38,10 +39,14 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
   const [sources, setSources] = useState<string[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [loading, setLoading] = useState(initialReports.length === 0);
+  // Start with server-provided data; no loading skeleton needed
+  // since data is pre-fetched server-side via getServerReports()
+  const [loading, setLoading] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [consentPreference, setConsentPreference] = useState<boolean | null>(() => readConsentPreference());
-  const [trends, setTrends] = useState<Record<string, TrendDataPoint[]>>({});
+  // Initialise as null so server and client first render match.
+  // Actual localStorage value is read in the mount effect below.
+  const [consentPreference, setConsentPreference] = useState<boolean | null>(null);
+  const [trends, setTrends] = useState<Record<string, TrendDataPoint[]>>(initialTrends);
 
   const selected = useMemo(
     () => reports.find((report) => report.id === selectedReportId) ?? null,
@@ -50,6 +55,10 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
   const consentGranted = consentPreference === true;
 
   useEffect(() => {
+    // Read initial value from localStorage after hydration so server
+    // and client renders stay in sync (avoids hydration mismatch).
+    setConsentPreference(readConsentPreference());
+
     const syncConsent = () => {
       setConsentPreference(readConsentPreference());
     };
@@ -58,6 +67,7 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
     return () => window.removeEventListener("storage", syncConsent);
   }, []);
 
+  // Refresh trends on mount for data that may have updated since SSR
   useEffect(() => {
     void api.getTrends().then((data) => setTrends(data.tests)).catch(() => {
       toast.error("Failed to load trends data");
@@ -85,11 +95,8 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
     }
   }, []);
 
-  useEffect(() => {
-    if (initialReports.length === 0) {
-      void refreshReports();
-    }
-  }, [initialReports.length, refreshReports]);
+  // No fallback fetch needed — initialReports comes from the server.
+  // If server returned no data, the empty state guides the user to upload.
 
   // Refresh when reports change to stop polling if nothing is processing
   useEffect(() => {

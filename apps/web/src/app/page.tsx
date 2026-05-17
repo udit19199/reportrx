@@ -1,123 +1,222 @@
 import { getSession } from "@/lib/session";
-
+import { redirect } from "next/navigation";
 import Link from "next/link";
-
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { SiteHeader } from "@/components/site-header";
 
 export default async function Home() {
   const session = await getSession();
 
+  if (session) {
+    redirect("/app");
+  }
+
   return (
     <>
       <SiteHeader />
-      <main id="main-content" className="page-shell pt-20">
-        <div className="organic-blob blob-1"></div>
-        <div className="organic-blob blob-2"></div>
-        <div className="organic-blob blob-3"></div>
 
-        <div className="relative mx-auto w-full max-w-[1400px] px-6 py-20 md:px-12 lg:py-32">
-          <section className="flex flex-col items-center text-center fade-up-soft">
-            <span className="pill-badge mb-8 stagger-1">A gentler way to understand your health</span>
+      {/* Ambient glow */}
+      <div className="warm-glow glow-1" aria-hidden="true" />
+      <div className="warm-glow glow-2" aria-hidden="true" />
+      <div className="warm-glow glow-3" aria-hidden="true" />
 
-            <h1 className="max-w-4xl text-5xl leading-[1.05] tracking-[-0.02em] md:text-7xl lg:text-[5.5rem] font-display text-primary mb-8 stagger-2">
-              Understand your medical <br className="hidden md:block" /> reports, <i className="text-secondary-foreground font-light">without the anxiety.</i>
+      <main id="main-content" className="relative">
+        {/* ═══════════════════════════════════════════
+           HERO
+           ═══════════════════════════════════════════ */}
+        <section className="relative mx-auto max-w-[1400px] px-6 pt-28 pb-20 md:px-12 md:pt-36 lg:pt-44 lg:pb-28">
+          <div className="mx-auto max-w-5xl text-center">
+            {/* Pill badge */}
+            <div className="reveal stagger-1 mb-8">
+              <span className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--card)] px-4 py-1.5 text-[0.7rem] font-medium uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
+                A gentler way to understand your health
+              </span>
+            </div>
+
+            {/* Hero headline */}
+            <h1 className="reveal stagger-2 text-[clamp(2.5rem,6.5vw,6rem)] leading-[0.95] font-display text-[var(--primary)]">
+              Understand your
+              <br />
+              medical reports,
+              <br />
+              <span className="italic font-light text-[var(--secondary-foreground)]">
+                without the anxiety.
+              </span>
             </h1>
 
-            <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl mb-12 stagger-3 font-sans">
-              Turn dense medical documents into plain language summaries, structured insights, and report-grounded answers. A guided, comforting experience that makes your health information manageable.
+            {/* Description */}
+            <p className="reveal stagger-3 mx-auto mt-8 max-w-2xl text-[1.05rem] leading-relaxed text-[var(--muted-foreground)] md:text-[1.15rem]">
+              Turn dense medical documents into plain language summaries, structured
+              insights, and report-grounded answers. A guided, comforting experience
+              that makes your health information manageable.
             </p>
 
-            <div className="flex flex-col gap-4 sm:flex-row items-center justify-center w-full stagger-4">
-              {session ? (
-                <Link
-                  href="/app"
-                  className="lux-button w-full sm:w-auto rounded-full bg-primary px-10 py-4 text-[0.95rem] font-medium text-primary-foreground"
+            {/* CTAs */}
+            <div className="reveal stagger-4 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Link
+                href="/auth/signup"
+                className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--primary)] px-8 text-[0.95rem] font-medium text-[var(--primary-foreground)] transition-all duration-300 hover:opacity-90 hover:-translate-y-0.5"
+              >
+                Begin your summary
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
                 >
-                  Open your workspace
-                </Link>
-              ) : (
-                <Link
-                  href="/auth/signup"
-                  className="lux-button w-full sm:w-auto rounded-full bg-primary px-10 py-4 text-[0.95rem] font-medium text-primary-foreground"
-                >
-                  Begin your summary
-                </Link>
-              )}
-              <Link href="#how-it-works" className="w-full sm:w-auto">
-                <span className="inline-flex w-full items-center justify-center rounded-full border border-white/60 bg-white/40 px-10 py-4 text-[0.95rem] font-medium text-foreground transition-colors hover:bg-white/60 sm:w-auto">
-                  See how it works
-                </span>
+                  <path d="M5 12l4-4-4-4" />
+                </svg>
+              </Link>
+              <Link
+                href="#how-it-works"
+                className="inline-flex h-12 items-center rounded-full border border-[var(--border)] bg-[var(--card)] px-8 text-[0.95rem] font-medium text-[var(--foreground)] transition-all duration-300 hover:border-[var(--primary)]/30 hover:bg-[var(--muted)] hover:-translate-y-0.5"
+              >
+                See how it works
               </Link>
             </div>
 
-            <div className="mt-20 subtle-line stagger-4"></div>
+            {/* Divider */}
+            <div className="reveal stagger-5 mt-16">
+              <Separator className="max-w-xs mx-auto" />
+            </div>
 
-            <div className="mt-8 text-xs tracking-wider uppercase text-muted-foreground/60 stagger-4 font-medium">
+            {/* Disclaimer */}
+            <p className="reveal stagger-6 mt-5 text-[0.65rem] font-medium uppercase tracking-[0.15em] text-[var(--muted-foreground)]/50">
               Informational only. Not medical advice.
+            </p>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════
+           HOW IT WORKS
+           ═══════════════════════════════════════════ */}
+        <section
+          id="how-it-works"
+          className="relative mx-auto max-w-[1400px] px-6 pb-28 md:px-12 md:pb-36"
+        >
+          <div className="mx-auto max-w-6xl">
+            {/* Section header */}
+            <div className="mb-16 text-center">
+              <span className="reveal stagger-1 inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--card)] px-4 py-1.5 text-[0.7rem] font-medium uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
+                The Approach
+              </span>
+              <h2 className="reveal stagger-2 mt-6 text-[clamp(2rem,4vw,3.5rem)] font-display text-[var(--primary)]">
+                Empowering you with <br />
+                <span className="italic font-light text-[var(--secondary-foreground)]">
+                  clarity and context.
+                </span>
+              </h2>
             </div>
-          </section>
 
-          <section id="how-it-works" className="mt-32 grid gap-12 lg:grid-cols-[1fr_1.2fr] items-start">
-            <aside className="glass-panel p-10 rounded-[2rem] sticky top-32 fade-up-soft stagger-1">
-              <div className="mb-12">
-                <div className="text-xs font-semibold uppercase tracking-widest text-accent-foreground mb-3">The Approach</div>
-                <h2 className="text-3xl md:text-4xl font-display text-primary leading-tight">
-                  Empowering you with <br /> clarity and context.
-                </h2>
-              </div>
-
-              <div className="space-y-8">
-                <div className="flex items-start gap-5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold">1</div>
-                  <div>
-                    <h4 className="text-lg font-display text-foreground mb-1">Reassuring Language</h4>
-                    <p className="text-sm leading-relaxed text-muted-foreground">We use supportive terminology that avoids being unnecessarily clinical or vague.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold">2</div>
-                  <div>
-                    <h4 className="text-lg font-display text-foreground mb-1">Factual Separation</h4>
-                    <p className="text-sm leading-relaxed text-muted-foreground">Clear distinctions between stated medical facts and our informational guidance.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold">3</div>
-                  <div>
-                    <h4 className="text-lg font-display text-foreground mb-1">Preparedness</h4>
-                    <p className="text-sm leading-relaxed text-muted-foreground">Leaves you with a cleaner understanding of what to ask your clinician next.</p>
-                  </div>
-                </div>
-              </div>
-            </aside>
-
-            <div className="grid gap-6">
-              <div className="glass-panel p-10 rounded-[2rem] fade-up-soft stagger-2 transition-transform hover:-translate-y-1 duration-500">
-                <div className="text-4xl text-secondary-foreground mb-6 font-display italic">01.</div>
-                <h3 className="text-2xl font-display text-primary mb-3">Upload your document</h3>
-                <p className="text-[1.05rem] leading-relaxed text-muted-foreground">
-                  Send a PDF report into a private workspace where the original document remains the secure source of truth. Your privacy is paramount.
-                </p>
-              </div>
-
-              <div className="glass-panel p-10 rounded-[2rem] fade-up-soft stagger-3 transition-transform hover:-translate-y-1 duration-500">
-                <div className="text-4xl text-secondary-foreground mb-6 font-display italic">02.</div>
-                <h3 className="text-2xl font-display text-primary mb-3">We summarize the findings</h3>
-                <p className="text-[1.05rem] leading-relaxed text-muted-foreground">
-                  We organize complex findings, laboratory values, and key takeaways into language that is far easier to absorb and understand at your own pace.
-                </p>
-              </div>
-
-              <div className="glass-panel p-10 rounded-[2rem] fade-up-soft stagger-4 transition-transform hover:-translate-y-1 duration-500">
-                <div className="text-4xl text-secondary-foreground mb-6 font-display italic">03.</div>
-                <h3 className="text-2xl font-display text-primary mb-3">Review &amp; prepare</h3>
-                <p className="text-[1.05rem] leading-relaxed text-muted-foreground">
-                  Review the interactive summary. Click on insights to see exactly where they appear in the original report, and easily note down questions for your doctor.
-                </p>
-              </div>
+            {/* Features grid */}
+            <div className="mb-20 grid gap-6 md:grid-cols-3">
+              {[
+                {
+                  num: "01",
+                  title: "AI-Powered Summaries",
+                  description:
+                    "Get a plain-language explanation of every lab value and what it means for your health.",
+                },
+                {
+                  num: "02",
+                  title: "Interactive Test Results",
+                  description:
+                    "See flagged values, reference ranges, and severity indicators at a glance.",
+                },
+                {
+                  num: "03",
+                  title: "Ask Questions",
+                  description:
+                    "Chat with your report to understand what everything means and what to ask your doctor.",
+                },
+              ].map((item, i) => (
+                <Card
+                  key={item.num}
+                  className={`reveal stagger-${i + 1} p-8 group transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}
+                >
+                  <span className="font-display text-[2.5rem] font-light italic leading-none text-[var(--secondary-foreground)]/30">
+                    {item.num}
+                  </span>
+                  <h3 className="mt-4 text-xl font-display font-medium text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors duration-300">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
+                    {item.description}
+                  </p>
+                </Card>
+              ))}
             </div>
-          </section>
-        </div>
+
+            {/* Steps — actual pipeline */}
+            <div className="grid gap-8 md:grid-cols-2 md:gap-12">
+              {[
+                {
+                  num: "01",
+                  title: "Upload PDF",
+                  body: "Upload your medical report PDF. We accept lab reports, diagnostic tests, and clinical summaries up to 10MB.",
+                },
+                {
+                  num: "02",
+                  title: "AI Extracts Data",
+                  body: "Our AI parses the document, extracting test results, reference ranges, impressions, and critical alerts into a structured format.",
+                },
+                {
+                  num: "03",
+                  title: "View Results + Ask Questions",
+                  body: "Review your plain-language summary, explore flagged results, and ask questions about anything you don't understand.",
+                },
+              ].map((step, i) => (
+                <Card
+                  key={step.num}
+                  className={`reveal stagger-${i + 1} relative overflow-hidden p-8 md:p-10 group transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 ${
+                    i === 0 ? "md:col-span-2" : ""
+                  }`}
+                >
+                  {/* Subtle botanical accent */}
+                  <div
+                    className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-[0.06]"
+                    style={{
+                      background:
+                        "radial-gradient(circle, oklch(0.60 0.07 40), transparent 70%)",
+                    }}
+                    aria-hidden="true"
+                  />
+                  <span className="font-display text-[2.5rem] font-light italic leading-none text-[var(--secondary-foreground)]/30">
+                    {step.num}
+                  </span>
+                  <h3 className="mt-4 text-xl font-display font-medium text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors duration-300">
+                    {step.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-relaxed text-[var(--muted-foreground)]">
+                    {step.body}
+                  </p>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════
+           FOOTER
+           ═══════════════════════════════════════════ */}
+        <footer className="border-t border-[var(--border)] py-10">
+          <div className="mx-auto max-w-[1400px] px-6 md:px-12">
+            <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+              <span className="font-display text-lg font-medium text-[var(--foreground)]">
+                ReportRx.
+              </span>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                &copy; {new Date().getFullYear()} ReportRx. Informational only. Not medical advice.
+              </p>
+            </div>
+          </div>
+        </footer>
       </main>
     </>
   );
