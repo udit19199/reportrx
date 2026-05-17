@@ -137,6 +137,9 @@ export function TestResultsTable({
                 Value
               </th>
               <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
+                Units
+              </th>
+              <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
                 Range
               </th>
               <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
@@ -148,7 +151,7 @@ export function TestResultsTable({
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={5}
                   className="py-8 text-center text-sm text-[var(--muted-foreground)]"
                 >
                   No tests match the selected filter.
@@ -177,8 +180,10 @@ export function TestResultsTable({
                         value={t.value}
                         referenceRange={t.reference_range}
                         status={t.status}
-                        unit={t.unit}
                       />
+                    </td>
+                    <td className="py-2.5 pr-3 text-xs text-[var(--muted-foreground)]">
+                      {t.unit}
                     </td>
                     <td className="py-2.5 pr-3 text-sm text-[var(--muted-foreground)]">
                       {t.reference_range}

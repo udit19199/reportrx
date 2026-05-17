@@ -385,7 +385,6 @@ export function ReportDetailGrid({
                     value={test.value}
                     referenceRange={test.reference_range}
                     status={test.status}
-                    unit={test.unit}
                   />
 
                   <p className="text-sm leading-snug text-[var(--muted-foreground)] md:border-l md:border-[var(--border)]/40 md:pl-6">

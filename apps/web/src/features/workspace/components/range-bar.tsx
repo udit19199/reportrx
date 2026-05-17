@@ -6,7 +6,6 @@ type RangeBarProps = {
   value: string;
   referenceRange: string;
   status: string;
-  unit: string;
   variant?: "compact" | "inline";
 };
 
@@ -20,7 +19,6 @@ export function RangeBar({
   value,
   referenceRange,
   status,
-  unit,
   variant = "compact",
 }: RangeBarProps) {
   const numValue = parseFloat(value);
@@ -30,7 +28,7 @@ export function RangeBar({
   if (isNaN(numValue) || !range) {
     return (
       <span className="text-sm font-medium text-[var(--foreground)]">
-        {value} {unit}
+        {value}
       </span>
     );
   }
@@ -101,9 +99,9 @@ export function RangeBar({
           />
         </div>
 
-        {/* Reference range + unit */}
+        {/* Reference range */}
         <span className="shrink-0 text-[11px] tabular-nums text-[var(--muted-foreground)]">
-          {range.min} – {range.max}{unit ? <span className="ml-1">{unit}</span> : null}
+          {range.min} – {range.max}
         </span>
       </div>
     );
@@ -127,7 +125,6 @@ export function RangeBar({
       <span className="text-sm font-medium text-[var(--foreground)]">
         {value}
       </span>
-      <span className="text-xs text-[var(--muted-foreground)]">{unit}</span>
     </div>
   );
 }
