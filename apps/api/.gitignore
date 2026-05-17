@@ -1,8 +1,18 @@
-node_modules
-# Keep environment variables out of version control
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+
+# Environment variables
 .env
 
-/generated/prisma
-uploads/
-dist/
+# Vector store
+milvus_data/
+qdrant_data/
 *.db
+
+# Uploads
+uploads/

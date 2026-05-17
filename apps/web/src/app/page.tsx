@@ -1,10 +1,11 @@
+import { getSession } from "@/lib/session";
+
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/site-header";
-import { auth0 } from "@/lib/auth0";
 
 export default async function Home() {
-  const session = await auth0.getSession();
+  const session = await getSession();
 
   return (
     <>
@@ -27,12 +28,21 @@ export default async function Home() {
             </p>
 
             <div className="flex flex-col gap-4 sm:flex-row items-center justify-center w-full stagger-4">
-              <Link
-                href={session ? "/app" : "/auth/signup"}
-                className="lux-button w-full sm:w-auto rounded-full bg-primary px-10 py-4 text-[0.95rem] font-medium text-primary-foreground"
-              >
-                {session ? "Open your workspace" : "Begin your summary"}
-              </Link>
+              {session ? (
+                <Link
+                  href="/app"
+                  className="lux-button w-full sm:w-auto rounded-full bg-primary px-10 py-4 text-[0.95rem] font-medium text-primary-foreground"
+                >
+                  Open your workspace
+                </Link>
+              ) : (
+                <Link
+                  href="/auth/signup"
+                  className="lux-button w-full sm:w-auto rounded-full bg-primary px-10 py-4 text-[0.95rem] font-medium text-primary-foreground"
+                >
+                  Begin your summary
+                </Link>
+              )}
               <Link href="#how-it-works" className="w-full sm:w-auto">
                 <span className="inline-flex w-full items-center justify-center rounded-full border border-white/60 bg-white/40 px-10 py-4 text-[0.95rem] font-medium text-foreground transition-colors hover:bg-white/60 sm:w-auto">
                   See how it works

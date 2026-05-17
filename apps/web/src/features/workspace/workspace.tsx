@@ -20,9 +20,11 @@ export function Workspace({ initialReports }: WorkspaceProps) {
           reports={workspace.reports}
           selected={workspace.selected}
           uploading={workspace.uploading}
+          loading={workspace.loading}
+          uploadError={workspace.uploadError}
           onSelect={workspace.selectReport}
           onUpload={workspace.uploadReport}
-          onDelete={workspace.deleteSelected}
+          onDelete={workspace.deleteReport}
         />
 
         {workspace.selected ? (
@@ -33,7 +35,7 @@ export function Workspace({ initialReports }: WorkspaceProps) {
             sources={workspace.sources}
             analyzing={workspace.analyzing}
             consentGranted={workspace.consentGranted}
-            error={workspace.error}
+            trends={workspace.trends}
             onQueryChange={workspace.setQuery}
             onAnalyze={workspace.analyzeSelected}
           />

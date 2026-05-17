@@ -3,14 +3,21 @@
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "pnpm --parallel --filter api --filter web dev",
-    "dev:api": "pnpm --filter api dev",
+    "dev": "pnpm dev:api & pnpm dev:web",
+    "dev:api": "cd apps/api && .venv/bin/python -m uvicorn src.main:app --host 0.0.0.0 --port 4000 --reload",
     "dev:web": "pnpm --filter web dev",
-    "build": "pnpm --filter api build && pnpm --filter web build",
-    "build:api": "pnpm --filter api build",
     "build:web": "pnpm --filter web build",
-    "lint": "pnpm --filter web lint && pnpm --filter api exec tsc -p tsconfig.json --noEmit",
-    "typecheck": "pnpm --filter api exec tsc -p tsconfig.json --noEmit && pnpm --filter web exec tsc -p tsconfig.json --noEmit",
+    "lint": "pnpm --filter web lint",
+    "typecheck": "pnpm --filter web exec tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf apps/api/dist apps/api/tsconfig.tsbuildinfo apps/web/.next apps/web/tsconfig.tsbuildinfo"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "prisma"
+    ]
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15"
   }
 }

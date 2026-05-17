@@ -10,4 +10,5 @@ apps/**/.next/
 *.log
 apps/**/tsconfig.tsbuildinfo
 uploads/
+qdrant_storage/
 

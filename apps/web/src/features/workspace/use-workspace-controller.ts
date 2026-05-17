@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
-import { api, type ApiReport } from "@/lib/api";
+import { api, type ApiReport, type TrendDataPoint } from "@/lib/api";
 import { readConsentPreference } from "@/lib/consent";
 
 export type WorkspaceController = {
@@ -13,13 +14,15 @@ export type WorkspaceController = {
   sources: string[];
   analyzing: boolean;
   uploading: boolean;
-  error: string;
+  loading: boolean;
+  uploadError: string;
   consentGranted: boolean;
+  trends: Record<string, TrendDataPoint[]>;
   setQuery: (value: string) => void;
   selectReport: (report: ApiReport) => void;
   uploadReport: (file: File) => Promise<void>;
   analyzeSelected: () => Promise<void>;
-  deleteSelected: () => Promise<void>;
+  deleteReport: (reportId: string) => Promise<void>;
   refreshReports: () => Promise<void>;
 };
 
@@ -35,8 +38,10 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
   const [sources, setSources] = useState<string[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(initialReports.length === 0);
+  const [uploadError, setUploadError] = useState("");
   const [consentPreference, setConsentPreference] = useState<boolean | null>(() => readConsentPreference());
+  const [trends, setTrends] = useState<Record<string, TrendDataPoint[]>>({});
 
   const selected = useMemo(
     () => reports.find((report) => report.id === selectedReportId) ?? null,
@@ -53,23 +58,40 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
     return () => window.removeEventListener("storage", syncConsent);
   }, []);
 
+  useEffect(() => {
+    void api.getTrends().then((data) => setTrends(data.tests)).catch(() => {
+      toast.error("Failed to load trends data");
+    });
+  }, []);
+
   const clearAnalysisState = useCallback(() => {
     setAnswer(null);
     setSources([]);
   }, []);
 
   const refreshReports = useCallback(async () => {
-    const data = await api.listReports();
-    setReports(data.reports);
-    setSelectedReportId((currentId) => {
-      if (currentId && data.reports.some((report) => report.id === currentId)) {
-        return currentId;
-      }
-
-      return data.reports[0]?.id ?? null;
-    });
+    setLoading(true);
+    try {
+      const data = await api.listReports();
+      setReports(data.reports);
+      setSelectedReportId((currentId) => {
+        if (currentId && data.reports.some((report) => report.id === currentId)) {
+          return currentId;
+        }
+        return data.reports[0]?.id ?? null;
+      });
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    if (initialReports.length === 0) {
+      void refreshReports();
+    }
+  }, [initialReports.length, refreshReports]);
+
+  // Refresh when reports change to stop polling if nothing is processing
   useEffect(() => {
     const hasProcessingReports = reports.some(
       (report) => report.status === "processing" || report.status === "pending"
@@ -78,7 +100,9 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
     if (!hasProcessingReports) return;
 
     const timer = window.setInterval(() => {
-      void refreshReports().catch((err) => setError((err as Error).message));
+      void refreshReports().catch((err) => {
+        toast.error((err as Error).message);
+      });
     }, 4000);
 
     return () => window.clearInterval(timer);
@@ -87,7 +111,7 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
   const selectReport = useCallback(
     (report: ApiReport) => {
       setSelectedReportId(report.id);
-      setError("");
+      setUploadError("");
       clearAnalysisState();
     },
     [clearAnalysisState]
@@ -95,14 +119,17 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
 
   const uploadReport = async (file: File) => {
     setUploading(true);
-    setError("");
+    setUploadError("");
 
     try {
       await api.uploadReport(file);
+      toast.success("Report uploaded — processing has started");
       await refreshReports();
       clearAnalysisState();
     } catch (err) {
-      setError((err as Error).message);
+      const message = (err as Error).message;
+      setUploadError(message);
+      toast.error(message);
     } finally {
       setUploading(false);
     }
@@ -112,7 +139,7 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
     if (!selected) return;
 
     setAnalyzing(true);
-    setError("");
+    setUploadError("");
     clearAnalysisState();
 
     try {
@@ -120,26 +147,31 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
       setAnswer(data.answer);
       setSources(data.sources ?? []);
     } catch (err) {
-      setError((err as Error).message);
+      const message = (err as Error).message;
+      toast.error(message);
     } finally {
       setAnalyzing(false);
     }
   };
 
-  const deleteSelected = async () => {
-    if (!selected) return;
-
-    setError("");
+  const deleteReport = useCallback(async (reportId: string) => {
+    setUploadError("");
 
     try {
-      await api.deleteReport(selected.id);
+      await api.deleteReport(reportId);
+      toast.success("Report deleted");
+      // Always clear selection & analysis if the deleted report was selected
+      // Use the reportId param directly instead of relying on `selected` closure
+      setSelectedReportId((currentId) => {
+        if (currentId === reportId) return null;
+        return currentId;
+      });
       clearAnalysisState();
-      setSelectedReportId(null);
       await refreshReports();
     } catch (err) {
-      setError((err as Error).message);
+      toast.error((err as Error).message);
     }
-  };
+  }, [clearAnalysisState, refreshReports]);
 
   return {
     reports,
@@ -149,13 +181,15 @@ export const useWorkspaceController = ({ initialReports }: Options): WorkspaceCo
     sources,
     analyzing,
     uploading,
-    error,
+    loading,
+    uploadError,
     consentGranted,
+    trends,
     setQuery,
     selectReport,
     uploadReport,
     analyzeSelected,
-    deleteSelected,
+    deleteReport,
     refreshReports,
   };
 };

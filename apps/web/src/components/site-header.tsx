@@ -1,9 +1,9 @@
+import { getSession } from "@/lib/session";
 import Link from "next/link";
-
-import { auth0 } from "@/lib/auth0";
+import { SignOutButton } from "@/components/sign-out-button";
 
 export async function SiteHeader() {
-  const session = await auth0.getSession();
+  const session = await getSession();
 
   return (
     <header className="fixed top-0 z-50 w-full transition-all duration-500 bg-transparent">
@@ -21,7 +21,7 @@ export async function SiteHeader() {
           {session ? (
             <>
               <span className="hidden text-sm text-foreground/70 sm:inline">
-                Welcome{session.user.name ? `, ${session.user.name.split(" ")[0]}` : ""}.
+                Welcome, {session.user.email.split("@")[0]}.
               </span>
               <Link
                 href="/app"
@@ -29,17 +29,12 @@ export async function SiteHeader() {
               >
                 Workspace
               </Link>
-              <Link
-                href="/auth/logout?returnTo=/"
-                className="lux-button rounded-full bg-primary px-6 py-2.5 text-sm font-medium tracking-wide text-primary-foreground"
-              >
-                Sign Out
-              </Link>
+              <SignOutButton />
             </>
           ) : (
             <>
               <Link
-                href="/auth/signin"
+                href="/auth/login"
                 className="text-sm font-medium tracking-wide text-foreground/80 hover:text-foreground transition-colors"
               >
                 Sign In

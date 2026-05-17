@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Toaster } from "sonner";
 
 const THEME_COLOR = "#fcfbf6";
 
@@ -45,6 +46,7 @@ export default function RootLayout({
         </a>
         <div className="noise-overlay pointer-events-none fixed inset-0 z-50 opacity-[0.03]"></div>
         {children}
+        <Toaster richColors closeButton position="bottom-right" />
       </body>
     </html>
   );
