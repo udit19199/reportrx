@@ -55,6 +55,7 @@ function UploadZone({
   uploadError,
 }: Pick<ReportsDrawerProps, "uploading" | "onUpload" | "uploadError">) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sizeError, setSizeError] = useState("");
 
   return (
     <div>
@@ -67,8 +68,9 @@ function UploadZone({
         onChange={(event) => {
           const file = event.target.files?.[0];
           if (!file) return;
+          setSizeError("");
           if (file.size > REPORT_UPLOAD_MAX_BYTES) {
-            alert(`File is too large. Maximum size is ${REPORT_UPLOAD_MAX_MB}MB.`);
+            setSizeError(`File is too large. Maximum size is ${REPORT_UPLOAD_MAX_MB}MB.`);
             event.target.value = "";
             return;
           }
@@ -81,20 +83,26 @@ function UploadZone({
         className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border)]/60 px-4 py-2.5 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:border-[var(--border)] hover:bg-[var(--muted)]/30"
       >
         {uploading ? (
-          <Loader2 className="size-3.5 animate-spin" />
+          <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
         ) : (
-          <Plus className="size-3.5" />
+          <Plus className="size-3.5" aria-hidden="true" />
         )}
-        {uploading ? "Uploading..." : "Upload PDF"}
+        {uploading ? "Uploading…" : "Upload PDF"}
       </label>
-      {uploadError && (
-        <p className="mt-1.5 text-xs text-destructive">{uploadError}</p>
+      {(sizeError || uploadError) && (
+        <p className="mt-1.5 text-xs text-destructive">{sizeError || uploadError}</p>
       )}
     </div>
   );
 }
 
 /* ── Report Item ─────────────────────────────────── */
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
 
 function ReportItem({
   report,
@@ -140,11 +148,7 @@ function ReportItem({
             {report.filename}
           </p>
           <p className="mt-px text-xs text-[var(--muted-foreground)]">
-            {new Date(report.uploadedAt).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
+            {dateFormatter.format(new Date(report.uploadedAt))}
           </p>
         </div>
 
@@ -245,7 +249,7 @@ export function ReportsDrawer({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-30 bg-black/15 backdrop-blur-sm transition-all duration-300 ${
+        className={`fixed inset-0 z-30 bg-black/15 backdrop-blur-sm transition-opacity duration-300 ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={onClose}
@@ -274,13 +278,14 @@ export function ReportsDrawer({
           </div>
           <div className="flex items-center gap-1">
             <kbd className="hidden rounded border border-[var(--border)]/50 bg-[var(--muted)]/30 px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted-foreground)] sm:inline-block">
-              ⌘K
+              ⌘&nbsp;K
             </kbd>
             <button
               onClick={onClose}
               className="flex size-6 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+              aria-label="Close reports panel"
             >
-              <X className="size-3.5" />
+              <X className="size-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -295,9 +300,10 @@ export function ReportsDrawer({
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--muted-foreground)]/50" />
             <input
               type="text"
-              placeholder="Search reports..."
+              placeholder="Search reports…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search reports"
               className="w-full rounded-lg border border-[var(--border)]/50 bg-[var(--background)] py-2 pl-8 pr-3 text-xs text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]/40 focus:border-[var(--primary)]/30 focus:outline-none focus:ring-1 focus:ring-[var(--primary)]/20"
             />
           </div>
@@ -309,7 +315,7 @@ export function ReportsDrawer({
             ) : filteredReports.length === 0 ? (
               <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-[var(--muted)]/50">
-                  <FileText className="size-5 text-[var(--muted-foreground)]/40" />
+                  <FileText className="size-5 text-[var(--muted-foreground)]/40" aria-hidden="true" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-[var(--foreground)]">
@@ -337,8 +343,9 @@ export function ReportsDrawer({
                       <DropdownMenuTrigger
                         onClick={(e) => e.stopPropagation()}
                         className="flex size-6 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+                        aria-label="More actions"
                       >
-                        <MoreVertical className="size-3.5" />
+                        <MoreVertical className="size-3.5" aria-hidden="true" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" side="right">
                         <DropdownMenuItem
@@ -348,7 +355,7 @@ export function ReportsDrawer({
                             onDelete(report.id);
                           }}
                         >
-                          <Trash2 className="size-3.5" data-icon="inline-start" />
+                          <Trash2 className="size-3.5" data-icon="inline-start" aria-hidden="true" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>

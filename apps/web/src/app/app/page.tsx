@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { WorkspaceErrorBoundary } from "@/components/error-boundary";
 import { Workspace } from "@/features/workspace/workspace";
 import { getServerReports, getServerTrends } from "@/lib/server-api";
@@ -16,7 +17,9 @@ export default async function AppPage() {
 
   return (
     <WorkspaceErrorBoundary>
-      <Workspace initialReports={reports} initialTrends={trendsData.tests} />
+      <Suspense fallback={null}>
+        <Workspace initialReports={reports} initialTrends={trendsData.tests} />
+      </Suspense>
     </WorkspaceErrorBoundary>
   );
 }

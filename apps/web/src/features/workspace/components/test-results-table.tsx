@@ -11,6 +11,14 @@ import {
   sortByResultSeverity,
 } from "../result-status";
 import type { TrendDataPoint } from "@/lib/api";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const TrendModal = dynamic(
   () => import("./trend-modal").then((mod) => mod.TrendModal),
@@ -112,6 +120,7 @@ export function TestResultsTable({
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
+              aria-pressed={filter === f.key}
               className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 filter === f.key
                   ? "border-[var(--primary)]/30 bg-[var(--primary)]/10 text-[var(--primary)]"
@@ -126,70 +135,57 @@ export function TestResultsTable({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--border)]/40">
-              <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
-                Test
-              </th>
-              <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
-                Value
-              </th>
-              <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
-                Units
-              </th>
-              <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
-                Range
-              </th>
-              <th className="pb-2.5 text-left text-xs font-medium text-[var(--muted-foreground)]">
-                Trend
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="overflow-hidden rounded-lg border border-[var(--border)]">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[200px] p-3">Test</TableHead>
+              <TableHead className="p-3">Value</TableHead>
+              <TableHead className="w-[80px] p-3">Units</TableHead>
+              <TableHead className="w-[160px] p-3">Range</TableHead>
+              <TableHead className="w-[180px] p-3">Trend</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filtered.length === 0 ? (
-              <tr>
-                <td
+              <TableRow>
+                <TableCell
                   colSpan={5}
-                  className="py-8 text-center text-sm text-[var(--muted-foreground)]"
+                  className="py-8 text-center text-muted-foreground"
                 >
                   No tests match the selected filter.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               filtered.map((t, i) => {
                 const history = trends[t.test_name] ?? [];
                 return (
-                  <tr
-                    key={i}
-                    className="border-b border-[var(--border)]/20 transition-colors hover:bg-[var(--muted)]/30"
-                  >
-                    <td className="py-2.5 pr-3">
-                      <span className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
+                  <TableRow key={i}>
+                    <TableCell className="w-[200px] p-3 whitespace-normal">
+                      <span className="flex items-start gap-2 font-medium">
                         <span
-                          className="size-2 shrink-0 rounded-full"
+                          className="mt-1 size-2.5 shrink-0 rounded-full"
                           style={{ backgroundColor: resultMarkerColor(t.status) }}
-                          aria-hidden
+                          aria-hidden="true"
                         />
-                        {t.test_name}
+                        <span>{t.test_name}</span>
                       </span>
-                    </td>
-                    <td className="py-2.5 pr-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <RangeBar
                         value={t.value}
                         referenceRange={t.reference_range}
                         status={t.status}
                       />
-                    </td>
-                    <td className="py-2.5 pr-3 text-xs text-[var(--muted-foreground)]">
-                      {t.unit}
-                    </td>
-                    <td className="py-2.5 pr-3 text-sm text-[var(--muted-foreground)]">
+                    </TableCell>
+                    <TableCell className="w-[80px] p-3 text-muted-foreground">
+                      {t.unit || "—"}
+                    </TableCell>
+                    <TableCell className="w-[160px] p-3 whitespace-normal text-muted-foreground">
                       {t.reference_range}
-                    </td>
-                    <td className="py-2.5">
-                      {history.length >= 2 && (
+                    </TableCell>
+                    <TableCell className="w-[180px] p-3">
+                      {history.length >= 2 ? (
                         <button
                           onClick={() =>
                             setTrendModal({
@@ -198,6 +194,7 @@ export function TestResultsTable({
                               current: t,
                             })
                           }
+                          aria-label={`View trend history for ${t.test_name}`}
                           className="group flex items-center gap-2"
                         >
                           <MiniSparkline
@@ -206,14 +203,16 @@ export function TestResultsTable({
                           />
                           <TrendBadge history={history} />
                         </button>
+                      ) : (
+                        <span className="text-muted-foreground/50">No data</span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Trend Modal */}

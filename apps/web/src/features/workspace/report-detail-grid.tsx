@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import {
-  AlertTriangle,
   AlertCircle,
   Stethoscope,
   ClipboardList,
@@ -20,7 +19,6 @@ import { RangeBar } from "./components/range-bar";
 import { ResultStatusLegend } from "./components/result-status-legend";
 import {
   resultDotStyle,
-  resultRowAccentClass,
   sortByResultSeverity,
 } from "./result-status";
 import {
@@ -30,6 +28,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 /* ── Types ───────────────────────────────────────── */
 
@@ -61,7 +67,6 @@ type ParsedData = {
 type ReportDetailGridProps = {
   data: Record<string, unknown>;
   trends?: Record<string, TrendDataPoint[]>;
-  showFullData: boolean;
   query: string;
   consentGranted: boolean;
   analyzing: boolean;
@@ -159,18 +164,19 @@ function QASection({
       <button
         onClick={onToggle}
         className="flex w-full items-center gap-2 text-left"
+        aria-expanded={expanded}
       >
         <div className="flex size-7 items-center justify-center rounded-lg bg-[var(--primary)]/8">
-          <Sparkles className="size-3.5 text-[var(--primary)]" />
+          <Sparkles className="size-3.5 text-[var(--primary)]" aria-hidden="true" />
         </div>
         <span className="text-sm font-medium text-[var(--foreground)]">
           Ask about this report
         </span>
         <span className="ml-auto text-[var(--muted-foreground)]">
           {expanded ? (
-            <ChevronDown className="size-4" />
+            <ChevronDown className="size-4" aria-hidden="true" />
           ) : (
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-4" aria-hidden="true" />
           )}
         </span>
       </button>
@@ -189,7 +195,7 @@ function QASection({
                     : "border-[var(--border)]/50 bg-[var(--card)] text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
                 }`}
               >
-                <Sparkles className="size-3" />
+                <Sparkles className="size-3" aria-hidden="true" />
                 {q}
               </button>
             ))}
@@ -198,7 +204,7 @@ function QASection({
           {/* Input */}
           <div className="flex gap-2">
             <Textarea
-              placeholder="What does the impression mean?"
+              placeholder="What does the impression mean?…"
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
               onKeyDown={(e) => {
@@ -215,7 +221,7 @@ function QASection({
               className="shrink-0 self-end"
             >
               {analyzing ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : (
                 "Ask"
               )}
@@ -236,7 +242,7 @@ function QASection({
           {answer && (
             <div className="rounded-xl border-l-4 border-l-[var(--primary)] bg-[var(--muted)]/40 p-5">
               <div className="mb-2 flex items-center gap-2">
-                <Sparkles className="size-4 text-[var(--primary)]" />
+                <Sparkles className="size-4 text-[var(--primary)]" aria-hidden="true" />
                 <span className="text-xs font-medium uppercase tracking-wider text-[var(--primary)]">
                   AI Response
                 </span>
@@ -291,7 +297,6 @@ function QASection({
 export function ReportDetailGrid({
   data,
   trends,
-  showFullData,
   query,
   consentGranted,
   analyzing,
@@ -301,6 +306,7 @@ export function ReportDetailGrid({
   onAnalyze,
 }: ReportDetailGridProps) {
   const [qaExpanded, setQaExpanded] = useState(false);
+  const [showFullData, setShowFullData] = useState(false);
 
   // Extract parsed data
   const tests = data.tests as ParsedTest[] | undefined;
@@ -320,6 +326,11 @@ export function ReportDetailGrid({
   );
 
   const hasIrregularities = flaggedTests.length > 0;
+
+  const nextSteps = useMemo(
+    () => (recommendations ?? []).filter((item) => item?.trim()),
+    [recommendations]
+  );
 
   // Build a lookup: finding name → explanation
   const findingExplanations = useMemo(() => {
@@ -346,179 +357,149 @@ export function ReportDetailGrid({
       {/* ─═ Flagged Results ═─────────────────────── */}
       {flaggedTests.length > 0 && (
         <section>
-          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-sm font-medium text-[var(--foreground)]">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-base font-medium text-[var(--foreground)]">
               {flaggedTests.length} result{flaggedTests.length > 1 ? "s" : ""} need attention
             </h2>
             <ResultStatusLegend />
           </div>
 
           <div className="overflow-hidden rounded-lg border border-[var(--border)]">
-            <div className="hidden border-b border-[var(--border)] bg-[var(--muted)]/40 px-4 py-2 text-[0.65rem] font-medium uppercase tracking-wider text-[var(--muted-foreground)] md:grid md:grid-cols-[minmax(0,1fr)_minmax(220px,1.15fr)_minmax(0,1.35fr)] md:gap-x-6">
-              <span>Test</span>
-              <span>Your result vs normal</span>
-              <span>What it may mean</span>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px] p-3">Test</TableHead>
+                  <TableHead className="p-3">Your result vs normal</TableHead>
+                  <TableHead className="w-[40%] p-3">What it may mean</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {flaggedTests.map((test, i) => {
+                  const finding = findingExplanations.get(test.test_name.toLowerCase());
+                  const impact = getImpactText(finding?.explanation, test);
 
-            {flaggedTests.map((test, i) => {
-              const finding = findingExplanations.get(test.test_name.toLowerCase());
-              const impact = getImpactText(finding?.explanation, test);
-
-              return (
-                <div
-                  key={i}
-                  className={`grid grid-cols-1 gap-x-6 gap-y-2 border-b border-[var(--border)]/50 px-4 py-2.5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(220px,1.15fr)_minmax(0,1.35fr)] md:items-center md:gap-y-0 ${resultRowAccentClass(test.status)}`}
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      className="size-2.5 shrink-0 rounded-full"
-                      style={resultDotStyle(test.status)}
-                      aria-hidden
-                    />
-                    <span className="truncate text-sm font-medium text-[var(--foreground)]">
-                      {test.test_name}
-                    </span>
-                  </div>
-
-                  <RangeBar
-                    variant="inline"
-                    value={test.value}
-                    referenceRange={test.reference_range}
-                    status={test.status}
-                  />
-
-                  <p className="text-sm leading-snug text-[var(--muted-foreground)] md:border-l md:border-[var(--border)]/40 md:pl-6">
-                    {impact}
-                  </p>
-                </div>
-              );
-            })}
+                  return (
+                    <TableRow key={i}>
+                      <TableCell className="p-3 whitespace-normal">
+                        <span className="flex items-start gap-2.5">
+                          <span
+                            className="mt-1 size-2.5 shrink-0 rounded-full"
+                            style={resultDotStyle(test.status)}
+                            aria-hidden
+                          />
+                          <span className="font-medium">{test.test_name}</span>
+                        </span>
+                      </TableCell>
+                      <TableCell className="p-3">
+                        <RangeBar
+                          variant="inline"
+                          value={test.value}
+                          referenceRange={test.reference_range}
+                          status={test.status}
+                          unit={test.unit}
+                        />
+                      </TableCell>
+                      <TableCell className="border-l border-[var(--border)]/40 p-3 whitespace-normal leading-relaxed text-[var(--muted-foreground)]">
+                        {impact}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         </section>
       )}
 
-      {/* ─═ Two-Column: Recommendations + Notes ════ */}
-      {(recommendations && recommendations.length > 0) ||
-      (doctorImpression && doctorImpression.length > 0) ||
-      (abnormalFindings && abnormalFindings.length > 0) ? (
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
-          {/* Left: Recommendations + Limitations */}
-          <div className="space-y-6">
-            {recommendations && recommendations.length > 0 && (
-              <div>
-                <h3 className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
-                  <ClipboardList className="size-3.5" />
-                  What to do
-                </h3>
-                <ul className="space-y-2">
-                  {recommendations.map((item, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-2 text-sm leading-relaxed text-[var(--foreground)]"
-                    >
-                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[var(--primary)]/40" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+      {/* ─═ Next steps ═──────────────────────────── */}
+      {nextSteps.length > 0 && (
+        <section>
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
+            <ClipboardList className="size-4 text-[var(--primary)]" aria-hidden="true" />
+            Next steps
+          </h2>
+          <ul className="space-y-2 rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-3">
+            {nextSteps.map((item, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-2 text-sm leading-relaxed text-[var(--foreground)]"
+              >
+                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[var(--primary)]/40" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+            <strong>Disclaimer:</strong> These suggestions are AI-generated and should not replace professional medical advice. Always consult a qualified healthcare provider before making any health-related decisions.
+          </p>
+        </section>
+      )}
 
-            {limitations && limitations.length > 0 && (
-              <div className="rounded-lg border border-[var(--border)]/30 bg-[var(--muted)]/30 p-4">
-                <h3 className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
-                  <AlertCircle className="size-3.5" />
-                  Limitations
-                </h3>
-                <ul className="space-y-1">
-                  {limitations.map((item, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-2 text-sm text-[var(--muted-foreground)]"
-                    >
-                      <span className="mt-1.5 size-1 shrink-0 rounded-full bg-[var(--muted-foreground)]/30" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Doctor's Impression (sticky) */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            <div className="space-y-6">
-              {doctorImpression && doctorImpression.length > 0 && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
-                    <Stethoscope className="size-3.5" />
-                    Doctor&apos;s notes
-                  </h3>
-                  <div className="space-y-3">
-                    {doctorImpression.map((item, i) => (
-                      <p
-                        key={i}
-                        className="text-sm leading-relaxed text-[var(--foreground)]"
-                      >
-                        {item}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {abnormalFindings && abnormalFindings.length > 0 && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
-                    <AlertTriangle className="size-3.5" />
-                    Abnormal findings
-                  </h3>
-                  <div className="space-y-3">
-                    {abnormalFindings.map((f, i) => {
-                      // Skip findings already shown in flagged results
-                      if (flaggedTests.some(
-                        (t) => t.test_name.toLowerCase() === f.finding.toLowerCase()
-                      )) return null;
-
-                      return (
-                        <div
-                          key={i}
-                          className={`rounded-lg border border-[var(--border)]/30 px-3 py-2.5 ${resultRowAccentClass(f.severity)}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="size-2 shrink-0 rounded-full"
-                              style={resultDotStyle(f.severity)}
-                              aria-hidden
-                            />
-                            <span className="text-sm font-medium text-[var(--foreground)]">
-                              {f.finding}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                            {f.explanation}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+      {/* ─═ Limitations + doctor's notes ═══════════ */}
+      {(limitations && limitations.length > 0) ||
+      (doctorImpression && doctorImpression.length > 0) ? (
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          {limitations && limitations.length > 0 && (
+            <div className="rounded-lg border border-[var(--border)]/30 bg-[var(--muted)]/30 p-4">
+              <h3 className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+                <AlertCircle className="size-3.5" aria-hidden="true" />
+                Limitations
+              </h3>
+              <ul className="space-y-1">
+                {limitations.map((item, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2 text-sm text-[var(--muted-foreground)]"
+                  >
+                    <span className="mt-1.5 size-1 shrink-0 rounded-full bg-[var(--muted-foreground)]/30" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          )}
+
+          {doctorImpression && doctorImpression.length > 0 && (
+            <div>
+              <h3 className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+                <Stethoscope className="size-3.5" aria-hidden="true" />
+                Doctor&apos;s notes
+              </h3>
+              <div className="space-y-3">
+                {doctorImpression.map((item, i) => (
+                  <p
+                    key={i}
+                    className="text-sm leading-relaxed text-[var(--foreground)]"
+                  >
+                    {item}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : null}
 
-      {/* ─═ Full Data (toggled) ═────────────────────── */}
-      {showFullData && tests && tests.length > 0 && (
+      {tests && tests.length > 0 && (
         <section className="border-t border-[var(--border)]/30 pt-6">
-          <h3 className="mb-4 text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
-            All test results
-          </h3>
-          <TestResultsTable
-            tests={tests as unknown as TestResult[]}
-            trends={trends}
-          />
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+              All test results
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowFullData((v) => !v)}
+              className="text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+            >
+              {showFullData ? "Hide table" : "Show all results"}
+            </button>
+          </div>
+          {showFullData && (
+            <TestResultsTable
+              tests={tests as unknown as TestResult[]}
+              trends={trends}
+            />
+          )}
         </section>
       )}
 

@@ -1,18 +1,19 @@
 "use client";
 
 import { FileText, Upload } from "lucide-react";
+import { useWorkspaceDrawer } from "@/components/workspace-drawer-context";
 
 type WorkspaceEmptyStateProps = {
   title: string;
   description: string;
-  onOpenDrawer?: () => void;
 };
 
 export function WorkspaceEmptyState({
   title,
   description,
-  onOpenDrawer,
 }: WorkspaceEmptyStateProps) {
+  const drawer = useWorkspaceDrawer();
+
   return (
     <section className="flex min-h-screen items-center justify-center px-6">
       <div className="flex max-w-sm flex-col items-center text-center">
@@ -22,12 +23,13 @@ export function WorkspaceEmptyState({
         <h2 className="mt-5 text-lg font-medium text-[var(--foreground)]">
           {title}
         </h2>
-        <p className="mt-2 text-sm text-[var(--muted-foreground)] leading-relaxed">
+        <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
           {description}
         </p>
-        {onOpenDrawer && (
+        {drawer && (
           <button
-            onClick={onOpenDrawer}
+            type="button"
+            onClick={() => drawer.openReports()}
             className="mt-6 inline-flex items-center gap-2 rounded-lg border border-[var(--border)]/50 bg-[var(--card)] px-4 py-2 text-xs font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
           >
             <Upload className="size-3.5" />

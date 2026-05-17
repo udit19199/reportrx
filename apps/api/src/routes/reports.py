@@ -62,6 +62,37 @@ def _compute_status(value: str, reference_range: str, flagged: bool) -> str:
         return "high"
 
 
+def _coerce_string_list(value) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if item and str(item).strip()]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    return []
+
+
+def _recommendations_from_interpretation(interpretation: dict) -> list[str]:
+    """Prefer explicit recommendations; fall back to actionable lines from interpretation text."""
+    recs = _coerce_string_list(interpretation.get("recommendations"))
+    if recs:
+        return recs
+
+    text = interpretation.get("interpretation")
+    if not isinstance(text, str) or not text.strip():
+        return []
+
+    lines = [
+        line.strip().lstrip("-•*0123456789.) ")
+        for line in text.split("\n")
+        if line.strip()
+    ]
+    actionable = [line for line in lines if len(line) > 15]
+    if len(actionable) >= 2:
+        return actionable[:8]
+
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    return [sentence.strip() for sentence in sentences if len(sentence.strip()) > 20][:6]
+
+
 def normalize_parsed_data(raw: dict | None) -> dict | None:
     """Normalize parsed_data for backward compatibility.
 
@@ -98,10 +129,10 @@ def normalize_parsed_data(raw: dict | None) -> dict | None:
             "tests": enriched_tests,
             "abnormal_findings": interpretation.get("abnormal_findings", []),
             "doctor_impression": [],
-            "recommendations": [],
+            "recommendations": _recommendations_from_interpretation(interpretation),
             "critical_alerts": interpretation.get("alerts", []),
             "plain_language_summary": interpretation.get("summary", ""),
-            "limitations": [],
+            "limitations": _coerce_string_list(interpretation.get("limitations")),
             "overall_confidence": 0.85,
         }
 

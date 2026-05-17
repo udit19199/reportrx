@@ -32,8 +32,18 @@ INTERPRETATION_SCHEMA = {
             "summary": {"type": "string"},
             "alerts": {"type": "array", "items": {"type": "string"}},
             "interpretation": {"type": "string"},
+            "recommendations": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
         },
-        "required": ["abnormal_findings", "summary", "alerts", "interpretation"],
+        "required": [
+            "abnormal_findings",
+            "summary",
+            "alerts",
+            "interpretation",
+            "recommendations",
+        ],
     },
     "strict": True,
 }
@@ -50,6 +60,7 @@ RULES:
 - Flag critical values that require immediate medical attention.
 - If no abnormalities are found, state that all values are within normal ranges.
 - Use plain language but include brief medical term explanations.
+- Provide 2–5 concrete next steps the patient can take (follow-up tests, lifestyle changes, when to contact a doctor). Do not diagnose.
 
 The extracted data contains:
 - patient_information: demographics
@@ -92,7 +103,7 @@ Extracted tests:
 {tests_summary}
 {context_section}
 
-Provide clinical interpretation including abnormal findings, summary, alerts, and overall interpretation."""
+Provide clinical interpretation including abnormal findings, summary, alerts, overall interpretation, and actionable next-step recommendations."""
 
     try:
         result = await ai_clients.llm.generate_json(
@@ -110,4 +121,5 @@ Provide clinical interpretation including abnormal findings, summary, alerts, an
             "summary": f"Interpretation could not be generated. ({error_msg})",
             "alerts": [],
             "interpretation": f"Error during interpretation: {error_msg}",
+            "recommendations": [],
         }

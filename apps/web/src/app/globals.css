@@ -195,11 +195,6 @@ h1, h2, h3, h4, h5, h6 {
 
 :root {
   --rail-width: 64px;
-  --rail-bg: #292524;
-  --rail-fg: #a8a29e;
-  --rail-active: #e7e5e4;
-  --rail-hover: #44403c;
-  --rail-divider: #44403c;
 }
 
 .app-shell {
@@ -226,8 +221,8 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   gap: 4px;
   padding: 12px 0;
-  background: var(--rail-bg);
-  border-right: 1px solid var(--rail-divider);
+  background: var(--card);
+  border-right: 1px solid var(--border);
 }
 
 .nav-rail-logo {
@@ -242,7 +237,7 @@ h1, h2, h3, h4, h5, h6 {
   width: 24px;
   height: 1px;
   margin: 8px 0;
-  background: var(--rail-divider);
+  background: var(--border);
   border-radius: 9999px;
 }
 
@@ -253,6 +248,12 @@ h1, h2, h3, h4, h5, h6 {
   gap: 2px;
 }
 
+button.nav-rail-item {
+  cursor: pointer;
+  background: transparent;
+  font: inherit;
+}
+
 .nav-rail-item {
   position: relative;
   display: flex;
@@ -261,22 +262,22 @@ h1, h2, h3, h4, h5, h6 {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  color: var(--rail-fg);
+  color: var(--muted-foreground);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
   border: 1px solid transparent;
 }
 
 .nav-rail-item:hover {
-  background: var(--rail-hover);
-  color: var(--rail-active);
-  border-color: var(--rail-divider);
+  background: var(--muted);
+  color: var(--foreground);
+  border-color: var(--border);
 }
 
 .nav-rail-item--active {
-  background: var(--rail-hover);
-  color: var(--rail-active);
-  border-color: var(--rail-divider);
+  background: var(--muted);
+  color: var(--foreground);
+  border-color: var(--border);
 }
 
 .nav-rail-item--active::before {
@@ -288,7 +289,7 @@ h1, h2, h3, h4, h5, h6 {
   width: 3px;
   height: 18px;
   border-radius: 0 9999px 9999px 0;
-  background: var(--rail-active);
+  background: var(--primary);
 }
 
 .nav-rail-tooltip {
@@ -298,8 +299,8 @@ h1, h2, h3, h4, h5, h6 {
   transform: translateY(-50%);
   padding: 4px 10px;
   border-radius: 6px;
-  background: oklch(0.12 0.02 50);
-  color: oklch(0.85 0.02 50);
+  background: var(--foreground);
+  color: var(--background);
   font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;

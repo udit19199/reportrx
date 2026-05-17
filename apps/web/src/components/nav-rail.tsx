@@ -3,17 +3,18 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
+  Files,
   TrendingUp,
   Settings2,
   LogOut,
-  Sparkles,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useWorkspaceDrawer } from "@/components/workspace-drawer-context";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -28,14 +29,24 @@ function getInitials(email: string): string {
   return email.charAt(0).toUpperCase();
 }
 
-const PRIMARY_NAV = [
-  { href: "/app", label: "Reports", icon: LayoutDashboard },
+const NAV_LINKS = [
   { href: "/app/trends", label: "Trends", icon: TrendingUp },
 ] as const;
 
 export function NavRail({ userEmail }: NavRailProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const drawer = useWorkspaceDrawer();
+
+  const isReportsView = pathname === "/app";
+
+  const handleReports = () => {
+    if (pathname === "/app") {
+      drawer?.openReports();
+    } else {
+      router.push("/app?reports=open");
+    }
+  };
 
   const handleSignOut = async () => {
     await api.logout();
@@ -44,23 +55,31 @@ export function NavRail({ userEmail }: NavRailProps) {
 
   return (
     <nav className="nav-rail" aria-label="Main navigation">
-      {/* ── Logo mark ─────────────────────────── */}
       <Link
         href="/app"
         className="nav-rail-logo group"
         aria-label="ReportRx home"
       >
-        <span className="relative flex size-10 items-center justify-center rounded-xl bg-[var(--rail-active)]/10 transition-all duration-300 group-hover:bg-[var(--rail-active)]/20">
-          <Sparkles className="size-5 text-[var(--rail-active)]" />
+            <span className="relative flex size-10 items-center justify-center rounded-xl bg-[var(--primary)]/10 transition-all duration-300 group-hover:bg-[var(--primary)]/15 font-display text-sm font-bold text-[var(--primary)]">
+              Rx
         </span>
       </Link>
 
-      {/* ── Divider ───────────────────────────── */}
       <div className="nav-rail-divider" />
 
-      {/* ── Primary navigation ────────────────── */}
       <div className="nav-rail-group">
-        {PRIMARY_NAV.map((item) => {
+        <button
+          type="button"
+          onClick={handleReports}
+          className={`nav-rail-item ${isReportsView ? "nav-rail-item--active" : ""}`}
+          aria-label="Reports"
+          aria-pressed={isReportsView}
+        >
+          <Files className="size-[18px]" aria-hidden="true" />
+          <span className="nav-rail-tooltip">Reports</span>
+        </button>
+
+        {NAV_LINKS.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
 
@@ -72,24 +91,22 @@ export function NavRail({ userEmail }: NavRailProps) {
               aria-label={item.label}
               aria-current={isActive ? "page" : undefined}
             >
-              <Icon className="size-[18px]" />
+              <Icon className="size-[18px]" aria-hidden="true" />
               <span className="nav-rail-tooltip">{item.label}</span>
             </Link>
           );
         })}
       </div>
 
-      {/* ── Spacer ────────────────────────────── */}
       <div className="flex-1" />
 
-      {/* ── User section ──────────────────────── */}
       <div className="nav-rail-group">
         <Link
           href="/settings"
           className={`nav-rail-item ${pathname === "/settings" ? "nav-rail-item--active" : ""}`}
           aria-label="Settings"
         >
-          <Settings2 className="size-[18px]" />
+          <Settings2 className="size-[18px]" aria-hidden="true" />
           <span className="nav-rail-tooltip">Settings</span>
         </Link>
 
@@ -97,9 +114,9 @@ export function NavRail({ userEmail }: NavRailProps) {
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <button className="nav-rail-item" aria-label="User menu">
+                <button type="button" className="nav-rail-item" aria-label="User menu">
                   <Avatar size="sm" className="nav-rail-avatar">
-                    <AvatarFallback className="bg-[var(--rail-active)]/15 text-[11px] font-medium text-[var(--rail-active)]">
+                    <AvatarFallback className="bg-[var(--primary)]/10 text-[11px] font-medium text-[var(--primary)]">
                       {getInitials(userEmail)}
                     </AvatarFallback>
                   </Avatar>
@@ -108,29 +125,32 @@ export function NavRail({ userEmail }: NavRailProps) {
               }
             />
             <DropdownMenuContent align="start" side="right" className="ml-3 w-52">
-              <DropdownMenuLabel className="truncate text-xs text-[var(--muted-foreground)]">
-                {userEmail}
-              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="truncate text-xs text-[var(--muted-foreground)]">
+                  {userEmail}
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  render={
+                    <Link
+                      href="/settings"
+                      className="flex w-full cursor-pointer items-center gap-2"
+                    />
+                  }
+                >
+                  <Settings2 className="size-3.5" data-icon="inline-start" aria-hidden="true" />
+                  Settings
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                render={
-                  <Link
-                    href="/settings"
-                    className="flex w-full cursor-pointer items-center gap-2"
-                  />
-                }
-              >
-                <Settings2 className="size-3.5" data-icon="inline-start" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={handleSignOut}
-                className="cursor-pointer text-destructive focus:text-destructive"
-              >
-                <LogOut className="size-3.5" data-icon="inline-start" />
-                Sign out
-              </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="size-3.5" data-icon="inline-start" aria-hidden="true" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         )}

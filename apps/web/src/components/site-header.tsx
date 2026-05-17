@@ -13,7 +13,7 @@ export async function SiteHeader() {
           <span className="font-display text-xl font-medium tracking-tight text-[var(--foreground)] transition-opacity duration-300 group-hover:opacity-70">
             ReportRx
           </span>
-          <span className="text-[var(--primary)] opacity-40">✦</span>
+          <span className="text-[var(--primary)] opacity-40" aria-hidden="true">✦</span>
         </Link>
 
         {/* Navigation */}
@@ -41,7 +41,7 @@ export async function SiteHeader() {
               </Link>
               <Link
                 href="/auth/signup"
-                className="inline-flex h-9 items-center rounded-full bg-[var(--primary)] px-5 text-sm font-medium text-[var(--primary-foreground)] transition-all duration-300 hover:opacity-90 hover:-translate-y-0.5"
+                className="inline-flex h-9 items-center rounded-full bg-[var(--primary)] px-5 text-sm font-medium text-[var(--primary-foreground)] transition-[opacity,transform] duration-300 hover:opacity-90 hover:-translate-y-0.5"
               >
                 Get Started
               </Link>

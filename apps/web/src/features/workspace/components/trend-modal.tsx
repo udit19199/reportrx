@@ -37,6 +37,12 @@ type TrendModalProps = {
   };
 };
 
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
 function parseRange(range: string | null): { min: number; max: number } | null {
   if (!range) return null;
   const match = range.match(/([0-9.]+)\s*[-–—to]+\s*([0-9.]+)/i);
@@ -56,7 +62,7 @@ export function TrendModal({
   const chartData = history.map((h) => {
     const numValue = parseFloat(h.value?.replace(/[^0-9.-]/g, "") ?? "");
     return {
-      date: new Date(h.uploadedAt).toLocaleDateString("en-US"),
+      date: dateFormatter.format(new Date(h.uploadedAt)),
       value: isNaN(numValue) ? null : numValue,
       reportId: h.reportId,
       filename: h.filename,
@@ -78,9 +84,7 @@ export function TrendModal({
             {testName} — Trend
           </DialogTitle>
           <DialogDescription>
-            {history.length} measurement
-            {history.length !== 1 ? "s" : ""} across {history.length} report
-            {history.length !== 1 ? "s" : ""}
+            {history.length} measurement{history.length !== 1 ? "s" : ""} across {history.length} report{history.length !== 1 ? "s" : ""}
           </DialogDescription>
         </DialogHeader>
 
@@ -218,7 +222,7 @@ export function TrendModal({
               className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-[var(--muted)]/50"
             >
               <span className="text-[var(--muted-foreground)]">
-                {new Date(h.uploadedAt).toLocaleDateString("en-US")}
+                {dateFormatter.format(new Date(h.uploadedAt))}
               </span>
               <span className="font-medium text-[var(--foreground)]">
                 {h.value} {h.unit}

@@ -67,10 +67,10 @@ export function InteractiveRow({
       onKeyDown={disabled ? undefined : handleKeyDown}
       className={cn(
         "group relative cursor-pointer select-none",
-        "transition-all duration-200",
+        "transition-[background-color,ring,opacity] duration-200",
         disabled && "cursor-default opacity-50 pointer-events-none",
         active && "bg-[var(--primary)]/5 ring-1 ring-[var(--primary)]/20",
-        !active && !disabled && "hover:bg-[var(--muted)]/40",
+        !active && !disabled && "hover:bg-[var(--muted)]/40 focus-visible:ring-1 focus-visible:ring-[var(--primary)]/30",
         className
       )}
     >

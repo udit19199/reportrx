@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ReportsDrawer } from "./components/reports-drawer";
 import { ReportContent } from "./report-content";
 import { WorkspaceEmptyState } from "./components/workspace-empty-state";
+import { useRegisterReportsDrawer } from "@/components/workspace-drawer-context";
 import type { ApiReport, TrendDataPoint } from "@/lib/api";
 import { useWorkspaceController } from "./use-workspace-controller";
 
@@ -15,18 +17,34 @@ type WorkspaceProps = {
 export function Workspace({ initialReports, initialTrends = {} }: WorkspaceProps) {
   const workspace = useWorkspaceController({ initialReports, initialTrends });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  // Cmd+K to toggle the reports drawer
+  const drawerControls = useMemo(
+    () => ({
+      open: () => setDrawerOpen(true),
+      close: () => setDrawerOpen(false),
+      toggle: () => setDrawerOpen((prev) => !prev),
+    }),
+    []
+  );
+
+  useRegisterReportsDrawer(drawerControls);
+
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setDrawerOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
+    if (searchParams.get("reports") === "open") {
+      setDrawerOpen(true);
+      router.replace("/app", { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  const handleSelectReport = useCallback(
+    (report: ApiReport) => {
+      workspace.selectReport(report);
+      setDrawerOpen(false);
+    },
+    [workspace]
+  );
 
   return (
     <div className="min-h-screen">
@@ -38,10 +56,7 @@ export function Workspace({ initialReports, initialTrends = {} }: WorkspaceProps
         uploading={workspace.uploading}
         loading={workspace.loading}
         uploadError={workspace.uploadError}
-        onSelect={(report) => {
-          workspace.selectReport(report);
-          setDrawerOpen(false);
-        }}
+        onSelect={handleSelectReport}
         onUpload={workspace.uploadReport}
         onDelete={workspace.deleteReport}
         onRefresh={workspace.refreshReports}
@@ -58,13 +73,11 @@ export function Workspace({ initialReports, initialTrends = {} }: WorkspaceProps
           trends={workspace.trends}
           onQueryChange={workspace.setQuery}
           onAnalyze={workspace.analyzeSelected}
-          onOpenDrawer={() => setDrawerOpen(true)}
         />
       ) : (
         <WorkspaceEmptyState
           title="No report selected"
-          description="Upload a PDF report to see your analysis, or press ⌘K to browse existing reports."
-          onOpenDrawer={() => setDrawerOpen(true)}
+          description="Upload a PDF report to see your analysis, or open Reports in the sidebar to browse existing reports."
         />
       )}
     </div>

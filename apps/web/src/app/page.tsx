@@ -56,7 +56,7 @@ export default async function Home() {
             <div className="reveal stagger-4 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/auth/signup"
-                className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--primary)] px-8 text-[0.95rem] font-medium text-[var(--primary-foreground)] transition-all duration-300 hover:opacity-90 hover:-translate-y-0.5"
+                className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--primary)] px-8 text-[0.95rem] font-medium text-[var(--primary-foreground)] transition-[opacity,transform] duration-300 hover:opacity-90 hover:-translate-y-0.5"
               >
                 Begin your summary
                 <svg
@@ -75,7 +75,7 @@ export default async function Home() {
               </Link>
               <Link
                 href="#how-it-works"
-                className="inline-flex h-12 items-center rounded-full border border-[var(--border)] bg-[var(--card)] px-8 text-[0.95rem] font-medium text-[var(--foreground)] transition-all duration-300 hover:border-[var(--primary)]/30 hover:bg-[var(--muted)] hover:-translate-y-0.5"
+                className="inline-flex h-12 items-center rounded-full border border-[var(--border)] bg-[var(--card)] px-8 text-[0.95rem] font-medium text-[var(--foreground)] transition-[border-color,background-color,transform] duration-300 hover:border-[var(--primary)]/30 hover:bg-[var(--muted)] hover:-translate-y-0.5"
               >
                 See how it works
               </Link>
@@ -138,7 +138,7 @@ export default async function Home() {
               ].map((item, i) => (
                 <Card
                   key={item.num}
-                  className={`reveal stagger-${i + 1} p-8 group transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}
+                  className={`reveal stagger-${i + 1} p-8 group transition-[shadow,transform] duration-300 hover:shadow-md hover:-translate-y-0.5`}
                 >
                   <span className="font-display text-[2.5rem] font-light italic leading-none text-[var(--secondary-foreground)]/30">
                     {item.num}
@@ -174,7 +174,7 @@ export default async function Home() {
               ].map((step, i) => (
                 <Card
                   key={step.num}
-                  className={`reveal stagger-${i + 1} relative overflow-hidden p-8 md:p-10 group transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 ${
+                  className={`reveal stagger-${i + 1} relative overflow-hidden p-8 md:p-10 group transition-[shadow,transform] duration-300 hover:shadow-md hover:-translate-y-0.5 ${
                     i === 0 ? "md:col-span-2" : ""
                   }`}
                 >

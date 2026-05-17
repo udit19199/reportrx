@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { NavRail } from "@/components/nav-rail";
+import { AppShell } from "@/components/app-shell";
+import { AppHeader } from "@/components/app-header";
 import { getSession } from "@/lib/session";
 
 export default async function AppLayout({
@@ -10,13 +11,11 @@ export default async function AppLayout({
   const session = await getSession();
 
   return (
-    <div className="app-shell">
-      <Suspense fallback={null}>
-        <NavRail userEmail={session?.user.email ?? ""} />
-      </Suspense>
-      <main className="app-content" id="main-content">
+    <Suspense fallback={null}>
+      <AppShell userEmail={session?.user.email ?? ""}>
+        <AppHeader />
         {children}
-      </main>
-    </div>
+      </AppShell>
+    </Suspense>
   );
 }

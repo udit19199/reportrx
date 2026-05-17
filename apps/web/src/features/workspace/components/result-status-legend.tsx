@@ -14,7 +14,7 @@ export function ResultStatusLegend({ className }: ResultStatusLegendProps) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-[var(--muted-foreground)]",
+        "flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-[var(--muted-foreground)]",
         className
       )}
       role="list"
@@ -23,7 +23,7 @@ export function ResultStatusLegend({ className }: ResultStatusLegendProps) {
       {LEGEND_ITEMS.map((item) => (
         <span key={item.key} className="flex items-center gap-1.5" role="listitem">
           <span
-            className="size-2.5 shrink-0 rounded-full"
+            className="size-3 shrink-0 rounded-full"
             style={{ backgroundColor: `var(--result-${item.key})` }}
             aria-hidden
           />
