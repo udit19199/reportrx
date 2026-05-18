@@ -9,12 +9,25 @@ import {
   type VisualRange,
 } from "../range-parse";
 
+export type CatalogRange = {
+  range: string | null;
+  range_min: number | null;
+  range_max: number | null;
+  range_type: string;
+  unit: string | null;
+  notes: string | null;
+};
+
 type RangeBarProps = {
   value: string;
   referenceRange: string;
   status: string;
   unit?: string;
   variant?: "compact" | "inline";
+  /** Override the marker tooltip with a description of what the test measures. */
+  tooltipText?: string;
+  /** Optional catalog-matched reference range to compare against the report's own range. */
+  catalogRange?: CatalogRange | null;
 };
 
 function buildVisualRange(
@@ -46,6 +59,7 @@ type InlineRangeTrackProps = {
   resultLabel: string;
   referenceRange: string;
   unit?: string;
+  tooltipText?: string;
 };
 
 function InlineRangeTrack({
@@ -55,6 +69,7 @@ function InlineRangeTrack({
   resultLabel,
   referenceRange,
   unit,
+  tooltipText,
 }: InlineRangeTrackProps) {
   const { markerPct, normalStart, normalWidth, range } = computeMarkerLayout(
     visual,
@@ -92,11 +107,11 @@ function InlineRangeTrack({
             aria-label={`Your result: ${resultLabel}`}
           />
           <span
-            className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--card)] px-2.5 py-1 text-xs font-semibold tabular-nums opacity-0 shadow-md transition-opacity duration-150 group-hover/marker:opacity-100 group-focus-within/marker:opacity-100"
+            className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-normal rounded-md border border-[var(--border)] bg-[var(--card)] px-2.5 py-1 text-xs font-medium opacity-0 shadow-md transition-opacity duration-150 group-hover/marker:opacity-100 group-focus-within/marker:opacity-100 max-w-60"
             style={{ color: marker }}
             role="tooltip"
           >
-            {resultLabel}
+            {tooltipText ?? resultLabel}
           </span>
         </div>
       </div>
@@ -115,6 +130,8 @@ export function RangeBar({
   status,
   unit,
   variant = "compact",
+  tooltipText,
+  catalogRange,
 }: RangeBarProps) {
   const numValue = parseNumericValue(value);
   const marker = resultMarkerColor(status);
@@ -151,6 +168,7 @@ export function RangeBar({
           visual={visual}
           marker={marker}
           resultLabel={resultLabel}
+          tooltipText={tooltipText}
           referenceRange={referenceRange}
           unit={unit}
         />
@@ -182,6 +200,11 @@ export function RangeBar({
       {referenceRange && (
         <p className="text-[11px] text-[var(--muted-foreground)]">
           Ref: {referenceRange}{unit ? ` ${unit}` : ""}
+        </p>
+      )}
+      {catalogRange?.range && catalogRange.range !== referenceRange && (
+        <p className="text-[10px] text-[var(--muted-foreground)]/40">
+          Catalog: {catalogRange.range}
         </p>
       )}
     </div>

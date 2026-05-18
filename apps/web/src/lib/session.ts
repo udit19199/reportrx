@@ -3,6 +3,11 @@ import { getServerSession } from "./server-api";
 export type SessionUser = {
   id: string;
   email: string;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  pregnant?: boolean | null;
 };
 
 /**

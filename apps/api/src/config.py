@@ -17,18 +17,16 @@ class Settings(BaseSettings):
     ai_provider: str = "openai"
     embed_provider: str = "openai"
     ai_model: str = "gpt-4o-mini"
-    embed_model: str = "text-embedding-3-large"
+    embed_model: str = "text-embedding-3-small"
     openai_api_key: str = ""
     openai_api_base: str = "https://api.openai.com/v1"
     embed_api_base: str = ""
-    lm_studio_chat_endpoint: str = ""
     ai_base_url: str = "http://localhost:11434"
     embed_base_url: str = "http://localhost:11434"
     qdrant_url: str = "http://localhost:6333"
     vector_collection: str = "medical_reports"
-    embed_dim: int = 768
+    embed_dim: int = 1536
     cookie_secure: bool = False
-    structured_output_system_prompt: str = ""
 
 
 @lru_cache()

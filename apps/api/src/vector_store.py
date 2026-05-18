@@ -45,7 +45,34 @@ async def start_qdrant() -> None:
         )
         logger.info(f"Collection {COLLECTION_NAME} created successfully")
     else:
-        logger.info(f"Collection {COLLECTION_NAME} already exists")
+        info = _client.get_collection(COLLECTION_NAME)
+        current_dim = info.config.params.vectors.size
+        if current_dim != settings.embed_dim:
+            logger.warning(
+                f"Collection {COLLECTION_NAME} has dim={current_dim} but config requires dim={settings.embed_dim}. "
+                f"Recreating collection..."
+            )
+            _client.delete_collection(COLLECTION_NAME)
+            _client.create_collection(
+                collection_name=COLLECTION_NAME,
+                vectors_config=models.VectorParams(
+                    size=settings.embed_dim,
+                    distance=models.Distance.COSINE,
+                ),
+            )
+            _client.create_payload_index(
+                collection_name=COLLECTION_NAME,
+                field_name="user_id",
+                field_type=models.PayloadSchemaType.KEYWORD,
+            )
+            _client.create_payload_index(
+                collection_name=COLLECTION_NAME,
+                field_name="report_id",
+                field_type=models.PayloadSchemaType.KEYWORD,
+            )
+            logger.info(f"Collection {COLLECTION_NAME} recreated with dim={settings.embed_dim}")
+        else:
+            logger.info(f"Collection {COLLECTION_NAME} already exists (dim={current_dim})")
 
 
 async def stop_qdrant() -> None:
@@ -76,7 +103,6 @@ def _format_source(page: int | None, section: str | None) -> str:
 
 
 async def upsert_vectors(
-    _address: str,  # kept for backward compat with callers — unused
     user_id: str,
     items: list[dict],
 ) -> None:
@@ -106,7 +132,6 @@ async def upsert_vectors(
 
 
 async def search_vectors(
-    _address: str,  # kept for backward compat — unused
     query_vector: list[float],
     user_id: str,
     report_id: str,
@@ -146,7 +171,6 @@ async def search_vectors(
 
 
 async def delete_by_report_id(
-    _address: str,  # kept for backward compat — unused
     user_id: str,
     report_id: str,
 ) -> None:

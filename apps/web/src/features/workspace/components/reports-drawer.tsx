@@ -11,9 +11,15 @@ import {
   Search,
   X,
   BookOpen,
+  Pencil,
+  RefreshCw,
+  GitCompare,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 
 import type { ApiReport } from "@/lib/api";
+import { PanelSelectorDialog, type PanelSlug } from "./panel-selector-dialog";
 import { REPORT_UPLOAD_MAX_BYTES, REPORT_UPLOAD_MAX_MB } from "@/lib/config";
 import {
   DropdownMenu,
@@ -31,6 +37,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type ReportsDrawerProps = {
@@ -42,18 +58,27 @@ type ReportsDrawerProps = {
   loading: boolean;
   uploadError: string;
   onSelect: (report: ApiReport) => void;
-  onUpload: (file: File) => void;
+  onUpload: (file: File, panels?: string[]) => void;
   onDelete: (reportId: string) => void;
+  onRename: (reportId: string, newFilename: string) => Promise<void>;
+  onReprocess: (reportId: string) => Promise<void>;
   onRefresh: () => void;
+  compareMode: boolean;
+  compareSelection: string[];
+  onToggleCompareMode: () => void;
+  onCompareSelect: (reportId: string) => void;
+  onStartCompare: () => void;
 };
 
 /* ── Upload Zone ────────────────────────────────── */
 
 function UploadZone({
   uploading,
-  onUpload,
   uploadError,
-}: Pick<ReportsDrawerProps, "uploading" | "onUpload" | "uploadError">) {
+  onPendingFile,
+}: Pick<ReportsDrawerProps, "uploading" | "uploadError"> & {
+  onPendingFile: (file: File) => void;
+}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sizeError, setSizeError] = useState("");
 
@@ -74,7 +99,7 @@ function UploadZone({
             event.target.value = "";
             return;
           }
-          onUpload(file);
+          onPendingFile(file);
           event.target.value = "";
         }}
       />
@@ -231,9 +256,21 @@ export function ReportsDrawer({
   onSelect,
   onUpload,
   onDelete,
+  onRename,
+  onReprocess,
   onRefresh,
+  compareMode,
+  compareSelection,
+  onToggleCompareMode,
+  onCompareSelect,
+  onStartCompare,
 }: ReportsDrawerProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [renameTarget, setRenameTarget] = useState<ApiReport | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [panelDialogOpen, setPanelDialogOpen] = useState(false);
 
   const filteredReports = useMemo(() => {
     if (!searchQuery.trim()) return reports;
@@ -277,9 +314,18 @@ export function ReportsDrawer({
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <kbd className="hidden rounded border border-[var(--border)]/50 bg-[var(--muted)]/30 px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted-foreground)] sm:inline-block">
-              ⌘&nbsp;K
-            </kbd>
+            <button
+              onClick={onToggleCompareMode}
+              className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[0.65rem] font-medium transition-colors ${
+                compareMode
+                  ? "bg-[var(--primary)]/10 text-[var(--primary)]"
+                  : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
+              }`}
+              aria-label={compareMode ? "Exit compare mode" : "Compare reports"}
+            >
+              <GitCompare className="size-3.5" aria-hidden="true" />
+              {compareMode ? "Done" : "Compare"}
+            </button>
             <button
               onClick={onClose}
               className="flex size-6 items-center justify-center rounded-md text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
@@ -291,25 +337,33 @@ export function ReportsDrawer({
         </div>
 
         {/* Content */}
-        <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-3">
-          {/* Upload */}
-          <UploadZone uploading={uploading} onUpload={onUpload} uploadError={uploadError} />
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--muted-foreground)]/50" />
-            <input
-              type="text"
-              placeholder="Search reports…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search reports"
-              className="w-full rounded-lg border border-[var(--border)]/50 bg-[var(--background)] py-2 pl-8 pr-3 text-xs text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]/40 focus:border-[var(--primary)]/30 focus:outline-none focus:ring-1 focus:ring-[var(--primary)]/20"
+        <div className="flex flex-1 flex-col">
+          <div className="flex flex-col gap-3 overflow-y-auto px-3 py-3">
+            {/* Upload */}
+            <UploadZone
+              uploading={uploading}
+              uploadError={uploadError}
+              onPendingFile={(file) => {
+                setPendingFile(file);
+                setPanelDialogOpen(true);
+              }}
             />
-          </div>
 
-          {/* List */}
-          <div className="flex flex-col gap-px">
+            {/* Search */}
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--muted-foreground)]/50" />
+              <input
+                type="text"
+                placeholder="Search reports…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search reports"
+                className="w-full rounded-lg border border-[var(--border)]/50 bg-[var(--background)] py-2 pl-8 pr-3 text-xs text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]/40 focus:border-[var(--primary)]/30 focus:outline-none focus:ring-1 focus:ring-[var(--primary)]/20"
+              />
+            </div>
+
+            {/* List */}
+            <div className="flex flex-col gap-px">
             {loading ? (
               <DrawerSkeleton />
             ) : filteredReports.length === 0 ? (
@@ -328,6 +382,66 @@ export function ReportsDrawer({
                   </p>
                 </div>
               </div>
+            ) : compareMode ? (
+              filteredReports.map((report) => {
+                const isSelected = compareSelection.includes(report.id);
+                const isDisabled = !isSelected && compareSelection.length >= 2;
+                return (
+                  <button
+                    key={report.id}
+                    onClick={() => onCompareSelect(report.id)}
+                    disabled={isDisabled}
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
+                      isSelected
+                        ? "bg-[var(--primary)]/8"
+                        : isDisabled
+                          ? "opacity-40 cursor-not-allowed"
+                          : "hover:bg-[var(--muted)]/40"
+                    }`}
+                  >
+                    <span className="flex size-5 shrink-0 items-center justify-center">
+                      {isSelected ? (
+                        <CheckSquare className="size-5 text-[var(--primary)]" aria-hidden="true" />
+                      ) : (
+                        <Square className="size-5 text-[var(--muted-foreground)]/40" aria-hidden="true" />
+                      )}
+                    </span>
+                    <span
+                      className={`mt-0.5 size-2 shrink-0 rounded-full ${
+                        report.status === "ready"
+                          ? "bg-emerald-500"
+                          : report.status === "failed"
+                            ? "bg-red-400"
+                            : "bg-[var(--primary)]/40"
+                      } ${report.status === "processing" || report.status === "pending" ? "animate-pulse" : ""}`}
+                      aria-hidden="true"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-[var(--foreground)]">
+                        {report.filename}
+                      </p>
+                      <p className="mt-px text-xs text-[var(--muted-foreground)]">
+                        {dateFormatter.format(new Date(report.uploadedAt))}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-medium tracking-wide ${
+                        report.status === "ready"
+                          ? "bg-emerald-50 text-emerald-600"
+                          : report.status === "failed"
+                            ? "bg-red-50 text-red-600"
+                            : "bg-[var(--primary)]/8 text-[var(--primary)]"
+                      }`}
+                    >
+                      {report.status === "ready"
+                        ? "Ready"
+                        : report.status === "failed"
+                          ? "Failed"
+                          : "Processing"}
+                    </span>
+                  </button>
+                );
+              })
             ) : (
               filteredReports.map((report) => (
                 <div key={report.id} className="group relative">
@@ -349,6 +463,27 @@ export function ReportsDrawer({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" side="right">
                         <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRenameTarget(report);
+                            setRenameValue(report.filename.replace(/\.pdf$/i, ""));
+                          }}
+                        >
+                          <Pencil className="size-3.5" data-icon="inline-start" aria-hidden="true" />
+                          Rename
+                        </DropdownMenuItem>
+                        {report.status === "failed" && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onReprocess(report.id);
+                            }}
+                          >
+                            <RefreshCw className="size-3.5" data-icon="inline-start" aria-hidden="true" />
+                            Reprocess
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -366,7 +501,109 @@ export function ReportsDrawer({
             )}
           </div>
         </div>
+
+        {/* Compare action bar — outside scroll area */}
+        {compareMode && compareSelection.length === 2 && (
+          <div className="border-t border-[var(--border)]/40 bg-[var(--card)] px-3 py-3">
+            <Button
+              className="w-full gap-2"
+              size="sm"
+              onClick={() => {
+                onStartCompare();
+                onClose();
+              }}
+            >
+              <GitCompare className="size-3.5" aria-hidden="true" />
+              Compare 2 reports
+            </Button>
+          </div>
+        )}
       </div>
+      </div>
+
+      {/* Panel selector dialog */}
+      <PanelSelectorDialog
+        open={panelDialogOpen}
+        onOpenChange={setPanelDialogOpen}
+        uploading={uploading}
+        onConfirm={(panels) => {
+          if (pendingFile) {
+            onUpload(pendingFile, panels.length > 0 ? panels : undefined);
+            setPendingFile(null);
+          }
+        }}
+      />
+
+      {/* Rename dialog */}
+      <Dialog
+        open={!!renameTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRenameTarget(null);
+            setRenameValue("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Rename report</DialogTitle>
+            <DialogDescription>
+              Enter a new filename for &ldquo;{renameTarget?.filename}&rdquo;.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!renameTarget || !renameValue.trim() || renaming) return;
+              const finalName = renameValue.trim().endsWith(".pdf")
+                ? renameValue.trim()
+                : `${renameValue.trim()}.pdf`;
+              setRenaming(true);
+              await onRename(renameTarget.id, finalName);
+              setRenaming(false);
+              setRenameTarget(null);
+              setRenameValue("");
+            }}
+          >
+            <div className="py-4">
+              <Input
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                placeholder="New filename"
+                autoFocus
+                className="w-full"
+              />
+              <p className="mt-1.5 text-xs text-[var(--muted-foreground)]">
+                {renameValue.trim() && !renameValue.trim().endsWith(".pdf")
+                  ? 'Will append ".pdf" extension'
+                  : " "}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setRenameTarget(null);
+                  setRenameValue("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!renameValue.trim() || renaming}>
+                {renaming ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+                    Renaming…
+                  </>
+                ) : (
+                  "Rename"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

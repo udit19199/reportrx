@@ -16,11 +16,14 @@ export type WorkspaceController = {
   loading: boolean;
   uploadError: string;
   trends: Record<string, TrendDataPoint[]>;
+  reprocessingReportId: string | null;
   setQuery: (value: string) => void;
   selectReport: (report: ApiReport) => void;
-  uploadReport: (file: File) => Promise<void>;
+  uploadReport: (file: File, panels?: string[]) => Promise<void>;
   analyzeSelected: () => Promise<void>;
   deleteReport: (reportId: string) => Promise<void>;
+  renameReport: (reportId: string, newFilename: string) => Promise<void>;
+  reprocessReport: (reportId: string) => Promise<void>;
   refreshReports: () => Promise<void>;
 };
 
@@ -41,6 +44,7 @@ export const useWorkspaceController = ({ initialReports, initialTrends = {} }: O
   // since data is pre-fetched server-side via getServerReports()
   const [loading, setLoading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [reprocessingReportId, setReprocessingReportId] = useState<string | null>(null);
   const [trends, setTrends] = useState<Record<string, TrendDataPoint[]>>(initialTrends);
 
   const selected = useMemo(
@@ -105,15 +109,20 @@ export const useWorkspaceController = ({ initialReports, initialTrends = {} }: O
     [clearAnalysisState]
   );
 
-  const uploadReport = async (file: File) => {
+  const uploadReport = async (file: File, panels?: string[]) => {
     setUploading(true);
     setUploadError("");
 
     try {
-      await api.uploadReport(file);
+      const result = await api.uploadReport(file, panels);
       toast.success("Report uploaded — processing has started");
+      // Optimistically add to list so it appears immediately (server will
+      // have the freshest data after refreshReports completes)
+      setReports((prev) => [result.report, ...prev.filter((r) => r.id !== result.report.id)]);
+      setSelectedReportId(result.report.id);
+      setAnswer(null);
+      setSources([]);
       await refreshReports();
-      clearAnalysisState();
     } catch (err) {
       const message = (err as Error).message;
       setUploadError(message);
@@ -161,6 +170,29 @@ export const useWorkspaceController = ({ initialReports, initialTrends = {} }: O
     }
   }, [clearAnalysisState, refreshReports]);
 
+  const renameReport = useCallback(async (reportId: string, newFilename: string) => {
+    try {
+      await api.renameReport(reportId, newFilename);
+      toast.success("Report renamed");
+      await refreshReports();
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  }, [refreshReports]);
+
+  const reprocessReport = useCallback(async (reportId: string) => {
+    setReprocessingReportId(reportId);
+    try {
+      await api.reprocessReport(reportId);
+      toast.success("Reprocessing has started");
+      await refreshReports();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setReprocessingReportId(null);
+    }
+  }, [refreshReports]);
+
   return {
     reports,
     selected,
@@ -172,11 +204,14 @@ export const useWorkspaceController = ({ initialReports, initialTrends = {} }: O
     loading,
     uploadError,
     trends,
+    reprocessingReportId,
     setQuery,
     selectReport,
     uploadReport,
     analyzeSelected,
     deleteReport,
+    renameReport,
+    reprocessReport,
     refreshReports,
   };
 };

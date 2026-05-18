@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+import re
 
 from src.config import get_settings
 from src.ai_clients import AiClients
@@ -218,7 +219,6 @@ async def with_retry(fn, retries: int = 3, delay_ms: int = 2000, label: str = ""
     raise last_error
 
 
-
 async def _retrieve_context_for_interpretation(
     ai_clients: AiClients,
     user_id: str,
@@ -226,11 +226,7 @@ async def _retrieve_context_for_interpretation(
     extraction: dict,
     top_k: int = 10,
 ) -> str:
-    """Retrieve relevant context for interpretation using all test names as a batch query.
-
-    Instead of one embed + search per test name (N+1 problem), this combines
-    all test names into a single query for one round-trip.
-    """
+    """Retrieve relevant context for interpretation using all test names as a batch query."""
     tests = extraction.get("tests", [])
     if not tests:
         return ""
@@ -240,9 +236,7 @@ async def _retrieve_context_for_interpretation(
 
     try:
         query_vector = (await ai_clients.embed.embed([combined_query]))[0]
-        contexts, sources = await search_vectors(
-            "", query_vector, user_id, report_id, top_k=top_k
-        )
+        contexts, sources = await search_vectors("", query_vector, user_id, report_id, top_k=top_k)
     except Exception as e:
         logger.warning(f"Batch retrieval failed: {e}")
         return ""
@@ -262,11 +256,62 @@ async def _retrieve_context_for_interpretation(
     return "\n\n".join(unique_contexts)
 
 
+def _parse_age(age_str: str) -> int | None:
+    """Parse age string like '21 Yrs' into integer years."""
+    if not age_str or age_str == "unknown":
+        return None
+    match = re.search(r"(\d+)", str(age_str))
+    if match:
+        age = int(match.group(1))
+        if re.search(r"(\d+)\s*(m|mo|month)", str(age_str), re.IGNORECASE):
+            return max(1, age // 12)
+        return age
+    return None
+
+
+def _write_test_results(db_session, report_id: str, tests: list[dict]) -> None:
+    """Write test results to the TestResult table.
+
+    Each test is stored with its canonical name, value, unit, and status.
+    Tests that match a catalog entry get test_id populated; unmatched tests
+    get test_id = null but are still stored.
+    """
+    from src.models import TestResult, TestCatalog
+
+    for t in tests:
+        test_name = t.get("test_name", "")
+        if not test_name:
+            continue
+
+        # Try to find a catalog match
+        catalog = db_session.query(TestCatalog).filter(
+            TestCatalog.test_name == test_name
+        ).first()
+
+        result = TestResult(
+            id=str(uuid.uuid4()),
+            report_id=report_id,
+            test_id=catalog.id if catalog else None,
+            test_name=test_name,
+            value=t.get("value", ""),
+            unit=t.get("unit"),
+            report_range=t.get("reference_range"),
+            flagged=t.get("flagged", False),
+            status=t.get("status", "normal"),
+            confidence=t.get("confidence"),
+        )
+        db_session.add(result)
+
+    db_session.commit()
+    logger.info(f"Wrote {len(tests)} test results for report {report_id}")
+
+
 async def process_ingestion_job(
     report_id: str,
     user_id: str,
     file_path: str,
     ai_clients: AiClients,
+    selected_panels: list[str] | None = None,
 ) -> None:
     """Process PDF ingestion with two-stage LLM pipeline.
 
@@ -276,9 +321,12 @@ async def process_ingestion_job(
     The final parsed_data combines both stages:
     - extraction: canonical structured data
     - interpretation: medical insights
+
+    Test results are also written to the TestResult table for relational queries.
+    Patient demographics are parsed and saved on the Report model.
     """
     from src.database import SessionLocal
-    from src.models import Report, ReportStatus
+    from src.models import Report, ReportStatus, Panel, PanelTest, TestCatalog
 
     logger.info(f"Starting job for report {report_id}")
     db = None
@@ -346,7 +394,7 @@ async def process_ingestion_job(
             total_upserted += len(items)
 
             await with_retry(
-                lambda i=items: upsert_vectors("", user_id, i),
+                lambda i=items: upsert_vectors(user_id, i),
                 retries=3,
                 delay_ms=500,
                 label="Vector store upsert",
@@ -354,11 +402,42 @@ async def process_ingestion_job(
 
         logger.info(f"Upserted {total_upserted} vectors to Milvus for report {report_id}")
 
-        await _set_stage("extracting")
-        logger.info(f"Stage 1: Extracting structured data using all parsed chunks...")
+        # ── Build expected test list from selected panels ──────────────
+        expected_tests_hint = ""
+        if selected_panels and len(selected_panels) > 0:
+            panel_slugs = selected_panels
+            panel_rows = db.query(Panel).filter(Panel.slug.in_(panel_slugs)).all()
+            if panel_rows:
+                panel_ids = [p.id for p in panel_rows]
+                panel_tests = (
+                    db.query(TestCatalog)
+                    .join(PanelTest, PanelTest.test_id == TestCatalog.id)
+                    .filter(PanelTest.panel_id.in_(panel_ids))
+                    .order_by(PanelTest.display_order)
+                    .all()
+                )
+                if panel_tests:
+                    expected_names = [t.test_name for t in panel_tests]
+                    expected_tests_hint = (
+                        "\n\nEXPECTED TESTS (based on user-selected panel):\n"
+                        + "\n".join(f"- {name}" for name in expected_names)
+                        + "\n\nThese tests should be present in this report type. "
+                        "If a test from this list is not found in the report, mark its value, unit, "
+                        "and reference_range as 'not found'. Do NOT fabricate values. "
+                        "You may also find additional tests not in this list — include them too."
+                    )
+                    logger.info(
+                        f"Injecting {len(expected_names)} expected test names from "
+                        f"{', '.join(p.slug for p in panel_rows)} panels"
+                    )
 
+        await _set_stage("extracting")
+        logger.info(f"Stage 1: Extracting from {len(chunks)} chunks (section-based merge)...")
+
+        # Pass chunks directly — extract_structured_data handles
+        # per-section extraction and internal merge
         extraction = await with_retry(
-            lambda: extract_structured_data(ai_clients, chunks),
+            lambda: extract_structured_data(ai_clients, chunks=chunks, expected_tests_hint=expected_tests_hint),
             retries=3,
             delay_ms=500,
             label="Extraction",
@@ -366,6 +445,30 @@ async def process_ingestion_job(
 
         num_tests = len(extraction.get("tests", []))
         logger.info(f"Extracted {num_tests} tests from report {report_id}")
+
+        # ── Write TestResult rows ─────────────────────────────────
+        await _set_stage("saving_results")
+        tests = extraction.get("tests", [])
+        _write_test_results(db, report_id, tests)
+
+        # ── Parse and store patient demographics ──────────────────
+        patient_info = extraction.get("patient_information", {})
+        patient_age = _parse_age(patient_info.get("age"))
+        patient_gender = patient_info.get("gender", "").lower().strip()
+        if patient_gender not in ("male", "female", "other"):
+            patient_gender = None
+
+        # ── Parse and store report date ──────────────────────────
+        report_date = extraction.get("report_date", "")
+        if report_date in ("unknown", "", None):
+            report_date = None
+
+        db.query(Report).filter(Report.id == report_id).update({
+            "patient_age": patient_age,
+            "patient_gender": patient_gender,
+            "report_date": report_date,
+        })
+        db.commit()
 
         await _set_stage("interpreting")
         logger.info(f"Stage 2: Interpreting structured data...")

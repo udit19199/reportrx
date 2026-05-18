@@ -8,14 +8,19 @@ export type ApiReport = {
   status: "pending" | "processing" | "ready" | "failed";
   currentStage?: string | null;
   uploadedAt: string;
+  reportDate?: string | null;
   parsedData?: Record<string, unknown> | null;
   errorMessage?: string | null;
+  selectedPanels?: string[];
+  patientAge?: number | null;
+  patientGender?: string | null;
 };
 
 export type TrendDataPoint = {
   reportId: string;
   filename: string;
   uploadedAt: string;
+  reportDate?: string | null;
   value: string | null;
   unit: string | null;
   referenceRange: string | null;
@@ -27,30 +32,39 @@ export type TrendsResponse = {
   tests: Record<string, TrendDataPoint[]>;
 };
 
+export type UserProfile = {
+  id: string;
+  email: string;
+  dateOfBirth: string | null;
+  gender: string | null;
+  weightKg: number | null;
+  heightCm: number | null;
+  pregnant: boolean | null;
+};
+
 function isAuthEndpoint(path: string): boolean {
-  return path.startsWith("/api/auth/login") || path.startsWith("/api/auth/register");
+  return (
+    path.startsWith("/api/auth/login") ||
+    path.startsWith("/api/auth/register")
+  );
 }
 
 function extractErrorMessage(data: unknown, status: number): string {
   if (!data) return `Request failed (status ${status})`;
 
-  // FastAPI simple error: { "detail": "message" }
   if (typeof data === "object" && "detail" in data) {
     const detail = data.detail;
     if (typeof detail === "string") return detail;
-    // FastAPI validation error: { "detail": [{ "loc": ["body", "field"], "msg": "...", "type": "..." }] }
     if (Array.isArray(detail)) {
       return detail
         .map((d: Record<string, unknown>) => {
           const msg = typeof d.msg === "string" ? d.msg : String(d.msg);
-          // Remove "Value error, " prefix from Pydantic messages
           return msg.replace(/^Value error, /, "");
         })
         .join("; ");
     }
   }
 
-  // Fallback for { "error": "message" } format
   if (typeof data === "object" && "error" in data && typeof data.error === "string") {
     return data.error;
   }
@@ -74,7 +88,6 @@ async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
     return response.json() as Promise<T>;
   }
 
-  // Only redirect on 401 for non-auth endpoints
   if (response.status === 401 && !isAuthEndpoint(path) && typeof window !== "undefined") {
     window.location.assign("/auth/login");
     return new Promise(() => {});
@@ -86,13 +99,13 @@ async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   login: (email: string, password: string) =>
-    requestJson<{ user: { id: string; email: string } }>("/api/auth/login", {
+    requestJson<{ user: UserProfile }>("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     }),
   register: (email: string, password: string) =>
-    requestJson<{ user: { id: string; email: string } }>("/api/auth/register", {
+    requestJson<{ user: UserProfile }>("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -103,18 +116,50 @@ export const api = {
     }).then(() => {
       window.location.assign("/");
     }),
+
+  // Profiles
+  getProfile: () =>
+    requestJson<{ user: UserProfile }>("/api/auth/me"),
+  updateProfile: (body: {
+    dateOfBirth?: string;
+    gender?: string;
+    weightKg?: number;
+    heightCm?: number;
+    pregnant?: boolean;
+  }) =>
+    requestJson<{ user: UserProfile }>("/api/auth/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+
+  // Reports
   listReports: () => requestJson<{ reports: ApiReport[] }>("/api/reports"),
   getReport: (id: string) => requestJson<{ report: ApiReport }>(`/api/reports/${id}`),
-  uploadReport: (file: File) => {
+  uploadReport: (file: File, panels?: string[]) => {
     const form = new FormData();
     form.append("file", file);
+    if (panels && panels.length > 0) {
+      form.append("panels", JSON.stringify(panels));
+    }
 
     return requestJson<{ report: ApiReport }>("/api/reports", {
       method: "POST",
       body: form,
     });
   },
-  deleteReport: (id: string) => requestJson<{ ok: boolean }>(`/api/reports/${id}`, { method: "DELETE" }),
+  deleteReport: (id: string) =>
+    requestJson<{ ok: boolean }>(`/api/reports/${id}`, { method: "DELETE" }),
+  renameReport: (id: string, filename: string) =>
+    requestJson<{ report: ApiReport }>(`/api/reports/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename }),
+    }),
+  reprocessReport: (id: string) =>
+    requestJson<{ report: ApiReport }>(`/api/reports/${id}/reprocess`, { method: "PUT" }),
+
+  // Analysis
   analyze: (reportId: string, query: string) =>
     requestJson<{ answer: string; sources: string[] }>("/api/analyze", {
       method: "POST",
@@ -122,6 +167,20 @@ export const api = {
       body: JSON.stringify({ reportId, query, topK: 5 }),
     }),
   getTrends: () => requestJson<TrendsResponse>("/api/trends"),
+
+  // Account
+  deleteAccount: () =>
+    requestJson<{ ok: boolean }>("/api/auth/me", { method: "DELETE" }),
+  updateAccount: (body: {
+    email?: string;
+    currentPassword: string;
+    newPassword?: string;
+  }) =>
+    requestJson<{ user: UserProfile }>("/api/auth/me", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
 };
 
 export type FieldErrors = Record<string, string>;
@@ -130,19 +189,16 @@ export function parseFieldErrors(errorMessage: string): { banner: string; fields
   const fields: FieldErrors = {};
   let banner = "";
 
-  // Email already registered → field error
   if (errorMessage.includes("already registered")) {
     fields.email = "This email is already registered";
     return { banner: "", fields };
   }
 
-  // Invalid credentials → banner (can't determine which field)
   if (errorMessage.includes("Invalid credentials")) {
     banner = "Invalid email or password";
     return { banner, fields };
   }
 
-  // FastAPI validation errors with field info
   if (errorMessage.includes("body.email") || errorMessage.includes("body.password")) {
     const parts = errorMessage.split("; ");
     for (const part of parts) {
@@ -157,13 +213,11 @@ export function parseFieldErrors(errorMessage: string): { banner: string; fields
     return { banner: banner || "", fields };
   }
 
-  // Password too short
   if (errorMessage.toLowerCase().includes("password") && errorMessage.includes("8")) {
     fields.password = "Password must be at least 8 characters";
     return { banner: "", fields };
   }
 
-  // Fallback → banner
   banner = errorMessage;
   return { banner, fields };
 }

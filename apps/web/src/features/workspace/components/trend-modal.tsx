@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { TrendDataPoint } from "@/lib/api";
+import { parseDate } from "@/lib/utils";
 import {
   LineChart,
   Line,
@@ -37,11 +38,15 @@ type TrendModalProps = {
   };
 };
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
+function formatTrendDate(value: string | null | undefined): string {
+  const d = parseDate(value);
+  if (isNaN(d.getTime())) return value ?? "";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(d);
+}
 
 function parseRange(range: string | null): { min: number; max: number } | null {
   if (!range) return null;
@@ -62,7 +67,7 @@ export function TrendModal({
   const chartData = history.map((h) => {
     const numValue = parseFloat(h.value?.replace(/[^0-9.-]/g, "") ?? "");
     return {
-      date: dateFormatter.format(new Date(h.uploadedAt)),
+      date: formatTrendDate(h.reportDate ?? h.uploadedAt),
       value: isNaN(numValue) ? null : numValue,
       reportId: h.reportId,
       filename: h.filename,
@@ -144,8 +149,9 @@ export function TrendModal({
 
         <Separator className="bg-[var(--border)]/40" />
 
-        {/* Chart */}
-        <div className="h-64">
+        {/* Chart — only render when open so dimensions are settled */}
+        {open && (
+          <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid
@@ -213,6 +219,7 @@ export function TrendModal({
             </LineChart>
           </ResponsiveContainer>
         </div>
+        )}
 
         {/* History list */}
         <div className="space-y-1">
@@ -222,7 +229,7 @@ export function TrendModal({
               className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-[var(--muted)]/50"
             >
               <span className="text-[var(--muted-foreground)]">
-                {dateFormatter.format(new Date(h.uploadedAt))}
+                {formatTrendDate(h.reportDate ?? h.uploadedAt)}
               </span>
               <span className="font-medium text-[var(--foreground)]">
                 {h.value} {h.unit}

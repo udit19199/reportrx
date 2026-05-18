@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { TrendDataPoint } from "@/lib/api";
+import { parseDate } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,18 @@ function computeTrend(history: TrendDataPoint[]): "up" | "down" | "stable" | nul
   return diff > 0 ? "up" : "down";
 }
 
+/** Prefer report_date (parsed from PDF) over uploaded_at. */
+function pointDate(h: TrendDataPoint): string {
+  return h.reportDate ?? h.uploadedAt;
+}
+
+/** Safely format a date string, falling back to the raw string when invalid. */
+function formatPointDate(h: TrendDataPoint): string {
+  const d = parseDate(pointDate(h));
+  if (isNaN(d.getTime())) return h.uploadedAt;
+  return d.toLocaleDateString("en-US");
+}
+
 /* ── Sparkline Card ──────────────────────────────── */
 
 function SparklineCard({
@@ -70,8 +83,9 @@ function SparklineCard({
   const chartData = history.map((h) => {
     const numValue = parseFloat(h.value?.replace(/[^0-9.-]/g, "") ?? "");
     return {
-      date: new Date(h.uploadedAt).toLocaleDateString("en-US"),
+      date: formatPointDate(h),
       value: isNaN(numValue) ? null : numValue,
+      filename: h.filename,
       status: h.status,
     };
   });
@@ -157,7 +171,7 @@ function DetailedChart({
   const chartData = history.map((h) => {
     const numValue = parseFloat(h.value?.replace(/[^0-9.-]/g, "") ?? "");
     return {
-      date: new Date(h.uploadedAt).toLocaleDateString("en-US"),
+      date: formatPointDate(h),
       value: isNaN(numValue) ? null : numValue,
       filename: h.filename,
       status: h.status,
@@ -269,7 +283,7 @@ function DetailedChart({
                 className="flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors hover:bg-[var(--muted)]/50"
               >
                 <span className="text-[var(--muted-foreground)]">
-                  {new Date(h.uploadedAt).toLocaleDateString("en-US")}
+                  {formatPointDate(h)}
                 </span>
                 <span className="font-medium text-[var(--foreground)]">
                   {h.value} {h.unit}

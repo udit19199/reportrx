@@ -19,34 +19,48 @@ logger = get_logger("main")
 
 
 def _run_migrations():
-    """Apply schema migrations for columns added after initial creation.
+    """Apply schema migrations for columns added after initial deploy.
 
-    SQLAlchemy's Base.metadata.create_all() only creates tables, it does NOT
-    ALTER existing tables when new columns are added to models. This function
-    adds any missing columns to keep the schema in sync.
+    SQLAlchemy's Base.metadata.create_all() only creates NEW tables — it does
+    NOT ALTER existing tables. This function adds missing columns to existing
+    tables so the schema stays in sync without a full DB reset.
     """
     from sqlalchemy import inspect, text
 
     inspector = inspect(engine)
-    existing_columns = {c["name"] for c in inspector.get_columns("Report")}
 
-    migrations = [
-        # currentStage was added after initial deploy
-        ("Report", "currentStage", "VARCHAR(64)"),
-    ]
+    TABLE_COLUMNS = {
+        "User": [
+            ("dateOfBirth", "DATE"),
+            ("gender", "VARCHAR(16)"),
+            ("weightKg", "FLOAT"),
+            ("heightCm", "FLOAT"),
+            ("pregnant", "BOOLEAN"),
+        ],
+        "Report": [
+            ("currentStage", "VARCHAR(64)"),
+            ("selectedPanels", "TEXT"),
+            ("patientAge", "INTEGER"),
+            ("patientGender", "VARCHAR(16)"),
+        ],
+    }
 
-    for table, column, col_type in migrations:
-        if column not in existing_columns:
-            try:
-                with engine.connect() as conn:
-                    conn.execute(text(f"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {col_type}"))
-                    conn.commit()
-                logger.info(f"Added missing column {table}.{column}")
-            except Exception as e:
-                logger.warning(f"Failed to add column {table}.{column}: {e}")
-        else:
-            # Refresh column list in case we added one
-            existing_columns.add(column)
+    for table, columns in TABLE_COLUMNS.items():
+        try:
+            existing = {c["name"] for c in inspector.get_columns(table)}
+        except Exception:
+            logger.warning(f"Could not inspect table {table}, skipping migrations for it")
+            continue
+
+        for col_name, col_type in columns:
+            if col_name not in existing:
+                try:
+                    with engine.connect() as conn:
+                        conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN "{col_name}" {col_type}'))
+                        conn.commit()
+                    logger.info(f"Added missing column {table}.{col_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to add column {table}.{col_name}: {e}")
 
 
 @asynccontextmanager
@@ -109,13 +123,12 @@ def _cors_headers(origin: str | None) -> dict[str, str]:
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
-    # CORS preflight must pass through because this middleware wraps OUTSIDE
-    # the CORSMiddleware — without this, OPTIONS requests hit auth first and
-    # get rejected before CORSMiddleware can respond to the preflight.
     if request.method == "OPTIONS":
         return await call_next(request)
 
-    if request.url.path.startswith("/api/auth") or request.url.path == "/":
+    # Public endpoints — no auth required
+    public_auth_paths = ("/api/auth/login", "/api/auth/register", "/api/auth/logout")
+    if request.url.path in public_auth_paths or request.url.path == "/":
         return await call_next(request)
 
     token = request.cookies.get("token")

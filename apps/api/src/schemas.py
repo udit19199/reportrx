@@ -1,22 +1,5 @@
-from datetime import datetime
+from datetime import date
 from pydantic import BaseModel, Field
-
-
-class UserResponse(BaseModel):
-    id: str
-    email: str
-
-
-class ReportResponse(BaseModel):
-    id: str
-    filename: str
-    status: str
-    uploadedAt: datetime
-    parsedData: dict | None = None
-    errorMessage: str | None = None
-
-    class Config:
-        from_attributes = True
 
 
 class RegisterRequest(BaseModel):
@@ -35,11 +18,6 @@ class AnalyzeRequest(BaseModel):
     topK: int = Field(default=5, ge=1, le=20)
 
 
-class AnalyzeResponse(BaseModel):
-    answer: str
-    sources: list[str]
-
-
 class UpdateReportRequest(BaseModel):
     filename: str | None = None
 
@@ -50,6 +28,19 @@ class UpdateAccountRequest(BaseModel):
     newPassword: str | None = Field(default=None, min_length=8)
 
 
-class ChangePasswordRequest(BaseModel):
-    currentPassword: str
-    newPassword: str = Field(min_length=8)
+class UpdateProfileRequest(BaseModel):
+    dateOfBirth: str | None = None  # ISO date string
+    gender: str | None = Field(default=None, pattern=r"^(male|female|other)?$")
+    weightKg: float | None = None
+    heightCm: float | None = None
+    pregnant: bool | None = None
+
+
+class UserProfileResponse(BaseModel):
+    id: str
+    email: str
+    dateOfBirth: str | None = None
+    gender: str | None = None
+    weightKg: float | None = None
+    heightCm: float | None = None
+    pregnant: bool | None = None

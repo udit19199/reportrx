@@ -1,12 +1,13 @@
 import uuid
 import os
+from datetime import date
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 
 from src.database import get_db
 from src.models import User, Report
-from src.schemas import UserResponse, RegisterRequest, LoginRequest, UpdateAccountRequest
+from src.schemas import RegisterRequest, LoginRequest, UpdateAccountRequest, UpdateProfileRequest, UserProfileResponse
 from src.auth import hash_password, verify_password, sign_token, verify_token
 from src.config import get_settings
 from src.vector_store import delete_by_report_id
@@ -26,6 +27,19 @@ def auth_cookie_options() -> dict:
     }
 
 
+def _user_to_profile(user: User) -> dict:
+    dob = user.date_of_birth.isoformat() if user.date_of_birth else None
+    return {
+        "id": user.id,
+        "email": user.email,
+        "dateOfBirth": dob,
+        "gender": user.gender,
+        "weightKg": user.weight_kg,
+        "heightCm": user.height_cm,
+        "pregnant": user.pregnant,
+    }
+
+
 @router.get("/me")
 async def get_me(
     request: Request,
@@ -40,7 +54,7 @@ async def get_me(
         user = db.query(User).filter(User.id == payload["sub"]).first()
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
-        return {"user": {"id": user.id, "email": user.email}}
+        return {"user": _user_to_profile(user)}
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -68,7 +82,7 @@ async def register(
     token = sign_token(sub=user.id, email=user.email)
     response.set_cookie(key="token", value=token, **auth_cookie_options())
 
-    return {"user": {"id": user.id, "email": user.email}}
+    return {"user": _user_to_profile(user)}
 
 
 @router.post("/login")
@@ -87,7 +101,7 @@ async def login(
     token = sign_token(sub=user.id, email=user.email)
     response.set_cookie(key="token", value=token, **auth_cookie_options())
 
-    return {"user": {"id": user.id, "email": user.email}}
+    return {"user": _user_to_profile(user)}
 
 
 @router.post("/logout")
@@ -127,7 +141,44 @@ async def update_account(
     token = sign_token(sub=user.id, email=user.email)
     response.set_cookie(key="token", value=token, **auth_cookie_options())
 
-    return {"user": {"id": user.id, "email": user.email}}
+    return {"user": _user_to_profile(user)}
+
+
+@router.put("/profile")
+async def update_profile(
+    body: UpdateProfileRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    user_id = request.state.user_id
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if body.dateOfBirth is not None:
+        try:
+            user.date_of_birth = date.fromisoformat(body.dateOfBirth)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format, use YYYY-MM-DD")
+
+    if body.gender is not None:
+        if body.gender not in ("male", "female", "other", ""):
+            raise HTTPException(status_code=400, detail="Gender must be 'male', 'female', or 'other'")
+        user.gender = body.gender if body.gender else None
+
+    if body.weightKg is not None:
+        user.weight_kg = body.weightKg
+
+    if body.heightCm is not None:
+        user.height_cm = body.heightCm
+
+    if body.pregnant is not None:
+        user.pregnant = body.pregnant
+
+    db.commit()
+    db.refresh(user)
+
+    return {"user": _user_to_profile(user)}
 
 
 @router.delete("/me")
@@ -149,7 +200,7 @@ async def delete_account(
         except OSError as e:
             logger.warning(f"Could not remove file {report.storage_path}: {e}")
         try:
-            await delete_by_report_id("", user_id, report.id)
+            await delete_by_report_id(user_id, report.id)
         except Exception as e:
             logger.warning(f"Could not delete vectors for report {report.id}: {e}")
 

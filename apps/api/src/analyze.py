@@ -29,7 +29,7 @@ async def answer_question(
             raise ValueError("Report not ready")
 
         query_vector = (await ai_clients.embed.embed([query]))[0]
-        contexts, sources = await search_vectors("", query_vector, user_id, report_id, top_k)
+        contexts, sources = await search_vectors(query_vector, user_id, report_id, top_k)
 
         if not contexts:
             return "I could not find relevant sections in this report for that question.", []

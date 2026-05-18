@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { TestGlossaryPopover } from "./test-glossary-popover";
 import dynamic from "next/dynamic";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { RangeBar } from "./range-bar";
@@ -9,7 +10,9 @@ import { TrendBadge } from "./trend-badge";
 import {
   resultMarkerColor,
   sortByResultSeverity,
+  getImpactText,
 } from "../result-status";
+import { getTestExplanation } from "../medical-glossary";
 import type { TrendDataPoint } from "@/lib/api";
 import {
   Table,
@@ -61,6 +64,10 @@ function MiniSparkline({
   );
 }
 
+/* ── Types ────────────────────────────────────────── */
+
+import type { CatalogRange } from "./range-bar";
+
 export type TestResult = {
   test_name: string;
   value: string;
@@ -68,70 +75,81 @@ export type TestResult = {
   reference_range: string;
   flagged: boolean;
   status: string;
+  catalog_range?: CatalogRange | null;
 };
 
 type TestResultsTableProps = {
   tests: TestResult[];
   trends?: Record<string, TrendDataPoint[]>;
+  /** Lookup: lowercase test name → { explanation, severity } for the "What it may mean" column. */
+  findingExplanations?: Map<string, { explanation: string; severity: string }>;
 };
 
-const FILTERS = [
-  { key: "all", label: "All" },
-  { key: "normal", label: "Normal" },
-  { key: "flagged", label: "Flagged" },
-] as const;
+/* ── Component ────────────────────────────────────── */
 
 export function TestResultsTable({
   tests,
   trends = {},
+  findingExplanations,
 }: TestResultsTableProps) {
-  const [filter, setFilter] = useState<string>("all");
+  const [showCritical, setShowCritical] = useState(true);
   const [trendModal, setTrendModal] = useState<{
     testName: string;
     history: TrendDataPoint[];
     current: TestResult;
   } | null>(null);
 
+  const criticalCount = useMemo(
+    () => tests.filter((t) => t.flagged || t.status !== "normal").length,
+    [tests]
+  );
+
+  const hasAnyTrend = useMemo(
+    () => tests.some((t) => (trends[t.test_name]?.length ?? 0) >= 2),
+    [tests, trends]
+  );
+
   const filtered = useMemo(() => {
     let list = tests;
-    if (filter === "flagged") {
+    if (showCritical) {
       list = tests.filter((t) => t.flagged || t.status !== "normal");
-    } else if (filter === "normal") {
-      list = tests.filter((t) => t.status === "normal" && !t.flagged);
     }
     return sortByResultSeverity(list);
-  }, [tests, filter]);
+  }, [tests, showCritical]);
+
+  const colSpan = hasAnyTrend ? 4 : 3;
 
   return (
     <>
-      <ResultStatusLegend className="mb-4" />
-
-      {/* Filter buttons */}
-      <div className="mb-4 flex items-center gap-2">
-        {FILTERS.map((f) => {
-          const count =
-            f.key === "all"
-              ? tests.length
-              : f.key === "flagged"
-                ? tests.filter((t) => t.flagged || t.status !== "normal").length
-                : tests.filter((t) => t.status === "normal" && !t.flagged).length;
-
-          return (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              aria-pressed={filter === f.key}
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                filter === f.key
-                  ? "border-[var(--primary)]/30 bg-[var(--primary)]/10 text-[var(--primary)]"
-                  : "border-[var(--border)]/60 bg-[var(--card)] text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
-              }`}
-            >
-              {f.label}
-              <span className="tabular-nums opacity-70">{count}</span>
-            </button>
-          );
-        })}
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        {/* All / Critical toggle */}
+        <div className="flex items-center gap-2">
+        <button
+          onClick={() => setShowCritical(false)}
+          aria-pressed={!showCritical}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+            !showCritical
+              ? "border-[var(--primary)]/30 bg-[var(--primary)]/10 text-[var(--primary)]"
+              : "border-[var(--border)]/60 bg-[var(--card)] text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
+          }`}
+        >
+          All
+          <span className="tabular-nums opacity-70">{tests.length}</span>
+        </button>
+        <button
+          onClick={() => setShowCritical(true)}
+          aria-pressed={showCritical}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+            showCritical
+              ? "border-[var(--primary)]/30 bg-[var(--primary)]/10 text-[var(--primary)]"
+              : "border-[var(--border)]/60 bg-[var(--card)] text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
+          }`}
+        >
+          Critical
+          <span className="tabular-nums opacity-70">{criticalCount}</span>
+        </button>
+        </div>
+        <ResultStatusLegend className="gap-x-3 text-xs" />
       </div>
 
       {/* Table */}
@@ -139,18 +157,19 @@ export function TestResultsTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[200px] p-3">Test</TableHead>
-              <TableHead className="p-3">Value</TableHead>
-              <TableHead className="w-[80px] p-3">Units</TableHead>
-              <TableHead className="w-[160px] p-3">Range</TableHead>
-              <TableHead className="w-[180px] p-3">Trend</TableHead>
+              <TableHead className="w-[240px] p-3">Test</TableHead>
+              <TableHead className="p-3">Your result</TableHead>
+              {hasAnyTrend && (
+                <TableHead className="w-[180px] p-3">Trend</TableHead>
+              )}
+              <TableHead className="w-[25%] p-3">What it may mean</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={colSpan}
                   className="py-8 text-center text-muted-foreground"
                 >
                   No tests match the selected filter.
@@ -159,53 +178,66 @@ export function TestResultsTable({
             ) : (
               filtered.map((t, i) => {
                 const history = trends[t.test_name] ?? [];
+                const finding = findingExplanations?.get(
+                  t.test_name.toLowerCase()
+                );
+                const impact = getImpactText(finding?.explanation, t);
+                const explanation = getTestExplanation(t.test_name);
+
                 return (
                   <TableRow key={i}>
-                    <TableCell className="w-[200px] p-3 whitespace-normal">
-                      <span className="flex items-start gap-2 font-medium">
+                    <TableCell className="w-[240px] min-w-[180px] p-3 whitespace-normal break-words hyphens-auto align-top">
+                      <span className="flex items-start gap-2">
                         <span
-                          className="mt-1 size-2.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: resultMarkerColor(t.status) }}
+                          className="mt-1.5 size-2.5 shrink-0 rounded-full"
+                          style={{
+                            backgroundColor: resultMarkerColor(t.status),
+                          }}
                           aria-hidden="true"
                         />
-                        <span>{t.test_name}</span>
+                        <TestGlossaryPopover testName={t.test_name} />
                       </span>
                     </TableCell>
                     <TableCell className="p-3">
                       <RangeBar
+                        variant="inline"
                         value={t.value}
                         referenceRange={t.reference_range}
                         status={t.status}
+                        unit={t.unit}
+                        tooltipText={explanation}
+                        catalogRange={t.catalog_range}
                       />
                     </TableCell>
-                    <TableCell className="w-[80px] p-3 text-muted-foreground">
-                      {t.unit || "—"}
-                    </TableCell>
-                    <TableCell className="w-[160px] p-3 whitespace-normal text-muted-foreground">
-                      {t.reference_range}
-                    </TableCell>
-                    <TableCell className="w-[180px] p-3">
-                      {history.length >= 2 ? (
-                        <button
-                          onClick={() =>
-                            setTrendModal({
-                              testName: t.test_name,
-                              history,
-                              current: t,
-                            })
-                          }
-                          aria-label={`View trend history for ${t.test_name}`}
-                          className="group flex items-center gap-2"
-                        >
-                          <MiniSparkline
-                            data={history}
-                            color={resultMarkerColor(t.status)}
-                          />
-                          <TrendBadge history={history} />
-                        </button>
-                      ) : (
-                        <span className="text-muted-foreground/50">No data</span>
-                      )}
+                    {hasAnyTrend && (
+                      <TableCell className="w-[180px] p-3">
+                        {history.length >= 2 ? (
+                          <button
+                            onClick={() =>
+                              setTrendModal({
+                                testName: t.test_name,
+                                history,
+                                current: t,
+                              })
+                            }
+                            aria-label={`View trend history for ${t.test_name}`}
+                            className="group flex items-center gap-2"
+                          >
+                            <MiniSparkline
+                              data={history}
+                              color={resultMarkerColor(t.status)}
+                            />
+                            <TrendBadge history={history} />
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground/50">
+                            No data
+                          </span>
+                        )}
+                      </TableCell>
+                    )}
+                    <TableCell className="border-l border-[var(--border)]/40 p-3 whitespace-normal leading-relaxed text-[var(--muted-foreground)]">
+                      {impact}
                     </TableCell>
                   </TableRow>
                 );
@@ -213,6 +245,13 @@ export function TestResultsTable({
             )}
           </TableBody>
         </Table>
+
+        {/* Empty trends notice */}
+        {!hasAnyTrend && tests.length > 0 && (
+          <div className="border-t border-[var(--border)]/40 px-3 py-2.5 text-center text-xs text-[var(--muted-foreground)]/50">
+            Trends will appear after you upload 2 or more reports with the same test.
+          </div>
+        )}
       </div>
 
       {/* Trend Modal */}

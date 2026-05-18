@@ -21,9 +21,29 @@ const bodyFont = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "ReportRx | Understand Your Medical Reports",
+  title: {
+    default: "ReportRx",
+    template: "%s | ReportRx",
+  },
   description:
     "Turn dense medical documents into plain language summaries without the anxiety.",
+  metadataBase: new URL(
+    process.env.APP_BASE_URL ?? "http://localhost:3000"
+  ),
+  openGraph: {
+    type: "website",
+    siteName: "ReportRx",
+    title: "ReportRx | Understand Your Medical Reports",
+    description:
+      "Turn dense medical documents into plain language summaries without the anxiety.",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ReportRx | Understand Your Medical Reports",
+    description:
+      "Turn dense medical documents into plain language summaries without the anxiety.",
+  },
 };
 
 export const viewport: Viewport = {
